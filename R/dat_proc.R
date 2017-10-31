@@ -13,7 +13,8 @@ crnm <- c('CTD', 'unk', 'abundances', 'Average CL', 'Average CW',
 
 crbs <- raw$Crabs %>% 
   as.tibble %>% 
-  rename_all(funs(make.names(crnm)))
+  rename_all(funs(make.names(crnm))) %>% 
+  select(CTD, abundances, pa)
 
 save(crbs, file = 'data/crbs.RData', compress = 'xz')
 
@@ -22,6 +23,7 @@ save(crbs, file = 'data/crbs.RData', compress = 'xz')
 
 vrnm <- raw$VarList %>% 
   unlist %>% 
+  make.names %>% 
   c('depth', 'CTD', .)
 
 ##
