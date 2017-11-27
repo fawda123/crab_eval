@@ -16,11 +16,12 @@ opts_chunk$set(warning = F, message = F)
 
 ### 30 meters
 
-```{r, fig.height = 9, fig.width = 9}
+#### Linear regression
+```{r}
 library(tidyverse)
 library(GGally)
-library(plotly)
 library(MuMIn)
+library(gbm)
 
 source('R/vif_func.R')
 
@@ -39,61 +40,16 @@ tomod <- envdat %>%
     val = scale(val)
   ) %>% 
   spread(var, val) 
-
-# correlation matrix to plot
-toplo <- tomod %>% 
-  select(-CTD, -pa) %>% 
-  cor(use = 'complete.obs', method = 'spearman') %>% 
-  data.frame %>% 
-  rownames_to_column('x') %>% 
-  gather('y', 'cor', -x) %>% 
-  arrange(x, y) %>% 
-  mutate(
-    x = factor(x), 
-    y = factor(y)
-  )
-
-# plot
-p <- ggplot(toplo, aes(x, y, fill = cor)) +
-  geom_tile() + 
-  theme(
-    axis.title.x = element_blank(), 
-    axis.title.y = element_blank(), 
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) + 
-  scale_y_discrete(expand = c(0, 0)) + 
-  scale_x_discrete(expand = c(0, 0)) + 
-  scale_fill_distiller(palette = 'RdYlGn')
-ggplotly(p)
 ```
-```{r, fig.height = 6, fig.width = 6}
+```{r, fig.height = 8, fig.width = 8}
 kpvars <- vif_func(tomod[, -c(1, 2)], trace = F, thresh = 7000)
 kpvars
 
 # correlation matrix to plot
-toplo <- tomod[, kpvars] %>% 
-  cor(use = 'complete.obs', method = 'spearman') %>% 
-  data.frame %>% 
-  rownames_to_column('x') %>% 
-  gather('y', 'cor', -x) %>% 
-  arrange(x, y) %>% 
-  mutate(
-    x = factor(x), 
-    y = factor(y)
-  )
+toplo <- tomod[, kpvars]
 
 # plot
-p <- ggplot(toplo, aes(x, y, fill = cor)) +
-  geom_tile() + 
-  theme(
-    axis.title.x = element_blank(), 
-    axis.title.y = element_blank(), 
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) + 
-  scale_y_discrete(expand = c(0, 0)) + 
-  scale_x_discrete(expand = c(0, 0)) + 
-  scale_fill_distiller(palette = 'RdYlGn')
-ggplotly(p)
+ggpairs(toplo)
 ```
 ```{r, eval = T, fig.height = 5, fig.width = 8}
 # abundance model
@@ -142,9 +98,32 @@ ggplot(toplo, aes(x = var, y = importance, fill = model)) +
                   
 ```
 
+#### Boosted regression trees
+
+```{r}
+kpvars <- c('Salinity', 'Temperature', 'Spice', 'pH', 'Phosphate')
+
+# abundance model
+formin <- kpvars %>% 
+  paste(., collapse = ' + ') %>% 
+  paste('log(1 + abundances)', ., sep = ' ~ ') %>% 
+  formula
+gbmod <- gbm(formin, data = tomod, distribution = "gaussian", bag.fraction = 0.9)
+# summary(gbmod)
+
+# pa model
+formin <- kpvars %>% 
+  paste(., collapse = ' + ') %>% 
+  paste('pa', ., sep = ' ~ ') %>% 
+  formula
+gbmod <- gbm(formin, data = tomod, distribution = "bernoulli", bag.fraction = 0.9)
+# summary(gbmod)
+```
+
+
 ### 100 meters
 
-```{r, fig.height = 9, fig.width = 9}
+```{r}
 
 # filter data by depth
 # scale variables(subtract mean, divide by sd)
@@ -158,61 +137,16 @@ tomod <- envdat %>%
     val = scale(val)
   ) %>% 
   spread(var, val) 
-
-# correlation matrix to plot
-toplo <- tomod %>% 
-  select(-CTD, -pa) %>% 
-  cor(use = 'complete.obs', method = 'spearman') %>% 
-  data.frame %>% 
-  rownames_to_column('x') %>% 
-  gather('y', 'cor', -x) %>% 
-  arrange(x, y) %>% 
-  mutate(
-    x = factor(x), 
-    y = factor(y)
-  )
-
-# plot
-p <- ggplot(toplo, aes(x, y, fill = cor)) +
-  geom_tile() + 
-  theme(
-    axis.title.x = element_blank(), 
-    axis.title.y = element_blank(), 
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) + 
-  scale_y_discrete(expand = c(0, 0)) + 
-  scale_x_discrete(expand = c(0, 0)) + 
-  scale_fill_distiller(palette = 'RdYlGn')
-ggplotly(p)
 ```
-```{r, fig.height = 6, fig.width = 6}
+```{r, fig.height = 8, fig.width = 8}
 kpvars <- vif_func(tomod[, -c(1, 2)], trace = F, thresh = 7000)
 kpvars
 
 # correlation matrix to plot
 toplo <- tomod[, kpvars] %>% 
-  cor(use = 'complete.obs', method = 'spearman') %>% 
-  data.frame %>% 
-  rownames_to_column('x') %>% 
-  gather('y', 'cor', -x) %>% 
-  arrange(x, y) %>% 
-  mutate(
-    x = factor(x), 
-    y = factor(y)
-  )
 
 # plot
-p <- ggplot(toplo, aes(x, y, fill = cor)) +
-  geom_tile() + 
-  theme(
-    axis.title.x = element_blank(), 
-    axis.title.y = element_blank(), 
-    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)
-  ) + 
-  scale_y_discrete(expand = c(0, 0)) + 
-  scale_x_discrete(expand = c(0, 0)) + 
-  scale_fill_distiller(palette = 'RdYlGn')
-ggplotly(p)
+ggpairs(toplo)
 ```
 ```{r, eval = T, fig.height = 5, fig.width = 8}
 # abundance model
