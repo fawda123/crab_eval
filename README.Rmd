@@ -20,162 +20,128 @@ opts_chunk$set(warning = F, message = F)
 ```{r}
 library(tidyverse)
 library(GGally)
+library(glmulti)
 library(MuMIn)
-
-source('R/vif_func.R')
 
 data(crbs)
 data(envdat)
 
-# filter data by depth
-# scale variables(subtract mean, divide by sd)
+# exp vars to use
+kpvars <- c('pH', 'Temperature', 'Salinity', 'Ammonia', 'Aragonite')
+
+# model globals
+resp <- c(
+    abundances = 'log(1+val)', 
+    pa = 'val', 
+    Average.CL = 'val'
+  ) %>% 
+  enframe('res', 'resp') %>% 
+  group_by(res) %>% 
+  nest(.key = 'resp') %>% 
+  mutate(
+    resp = map(resp, ~ paste(.x, paste(kpvars, collapse = '+'), sep = '~'))
+    )
+fams <- list(
+    abundances = gaussian(), 
+    pa = binomial(), 
+    Average.CL = gaussian()
+  ) %>% 
+  enframe('res', 'dist')
+
+# data prep, nested for mods
 tomod <- envdat %>% 
-  filter(depth == 30) %>% 
+  filter(depth %in% c(10, 200)) %>% 
   left_join(crbs, by = 'CTD') %>% 
-  select(-depth) %>% 
-  gather('var', 'val', -CTD, -abundances, -pa) %>% 
+  gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>% 
   group_by(var) %>% 
   mutate(
     val = scale(val)
   ) %>% 
-  spread(var, val) 
+  spread(var, val) %>% 
+  dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>% 
+  gather('res', 'val', abundances, pa, Average.CL) %>% 
+  dplyr::select(depth, res, val, everything()) %>% 
+  group_by(depth, res) %>% 
+  nest %>% 
+  left_join(fams, by = 'res') %>% 
+  left_join(resp, by = 'res')
+
 ```
 ```{r, fig.height = 8, fig.width = 8}
-kpvars <- vif_func(tomod[, -c(1, 2)], trace = F, thresh = 7000)
-kpvars <- kpvars[!kpvars %in% 'pCO2'] %>% 
-  gsub('\\.at\\.this.*', '', .)
-kpvars 
-
 # correlation matrix to plot
-toplo <- tomod[, kpvars]
-
+toplo <- tomod %>% 
+  filter(res == 'abundances') %>% 
+  dplyr::select(data) %>% 
+  unnest %>% 
+  .[, c('val', kpvars)] %>% 
+  rename(abundance = val) %>% 
+  mutate(val = log(1 + val))
+  
 # plot
 ggpairs(toplo)
 ```
 ```{r, eval = T, fig.height = 5, fig.width = 8}
-# abundance model
-formin <- kpvars %>% 
-  paste(., collapse = ' + ') %>% 
-  paste('log(1 + abundances)', ., sep = ' ~ ') %>% 
-  formula
+# models
+mods <- tomod %>% 
+  mutate(
+    moddat = pmap(list(data, dist, resp), function(data, dist, resp){
 
-global1 <- glm(formin, data = tomod, na.action = na.pass)
+      # filter data to remove NA
+      x <- data %>% 
+        filter(!is.na(val))
+      
+      cffs <- glmulti(y = formula(resp), data = x, level = 1, crit = 'aicc', plotty = F, 
+                       family = dist, report = F) %>% 
+        coef %>% 
+        data.frame %>% 
+        rownames_to_column('var')
 
-sol1 <- dredge(global1)
-head(sol1)
-importance(sol1) 
+      # top five AICc models
+      globs <- glm(resp, data = x, na.action = na.pass, family = dist)
+      drdg <- dredge(globs) %>% 
+        data.frame %>% 
+        .[1:5, ]
 
-# p/a model
-formin <- kpvars %>% 
-  paste(., collapse = ' + ') %>% 
-  paste('pa', ., sep = ' ~ ') %>% 
-  formula
-
-global2 <- glm(formin, data = tomod, na.action = na.pass, family = binomial())
-
-sol2 <- dredge(global2)
-head(sol2)
-
-importance(sol2) 
-
-toplo1 <- sol1 %>% 
-  importance %>% 
-  data.frame(importance = .) %>% 
-  rownames_to_column('var') %>% 
-  mutate(model = 'abundance')
-
-toplo2<- sol2 %>% 
-  importance %>% 
-  data.frame(importance = .) %>% 
-  rownames_to_column('var') %>% 
-  mutate(model = 'p/a')  
-toplo <- rbind(toplo1, toplo2) %>% 
-  arrange(model, importance) %>% 
-  mutate(var = factor(var, levels = unique(var)))
-
-ggplot(toplo, aes(x = var, y = importance, fill = model)) +
-  geom_bar(stat = 'identity', position = 'dodge') +
-  coord_flip() + 
-  theme_bw() + 
-  theme(axis.title.y = element_blank())
-                  
+      out <- list(drdg, cffs)
+      return(out)
+      
+    })
+    
+  ) %>% 
+  select(depth, res, moddat) %>% 
+  mutate(
+    tops = map(moddat, ~ .x[[1]]),
+    cffs = map(moddat, ~ .x[[2]])
+  ) %>% 
+  select(-moddat)
 ```
-
-### 100 meters
 
 ```{r}
-
-# filter data by depth
-# scale variables(subtract mean, divide by sd)
-tomod <- envdat %>% 
-  filter(depth == 100) %>% 
-  left_join(crbs, by = 'CTD') %>% 
-  select(-depth) %>% 
-  gather('var', 'val', -CTD, -abundances, -pa) %>% 
-  group_by(var) %>% 
-  mutate(
-    val = scale(val)
-  ) %>% 
-  spread(var, val) 
+# tabular
+totab <- mods %>% 
+  select(-cffs) %>% 
+  unnest
 ```
-```{r, fig.height = 8, fig.width = 8}
-kpvars <- vif_func(tomod[, -c(1, 2)], trace = F, thresh = 7000)
-kpvars <- kpvars[!kpvars %in% 'pCO2'] %>% 
-  gsub('\\.at\\.this.*', '', .)
-kpvars
 
-# correlation matrix to plot
-toplo <- tomod[, kpvars] %>% 
+```{r}
+# toplot
+toplo <- mods %>% 
+  select(-tops) %>% 
+  unnest %>% 
+  filter(!var %in% '(Intercept)')
+names(toplo) <- gsub('\\.*', '', names(toplo))
 
-# plot
-ggpairs(toplo)
-```
-```{r, eval = T, fig.height = 5, fig.width = 8}
-# abundance model
-formin <- kpvars %>% 
-  paste(., collapse = ' + ') %>% 
-  paste('log(1 + abundances)', ., sep = ' ~ ') %>% 
-  formula
-
-global1 <- glm(formin, data = tomod, na.action = na.pass)
-
-sol1 <- dredge(global1)
-head(sol1)
-importance(sol1) 
-
-# p/a model
-formin <- kpvars %>% 
-  paste(., collapse = ' + ') %>% 
-  paste('pa', ., sep = ' ~ ') %>% 
-  formula
-
-global2 <- glm(formin, data = tomod, na.action = na.pass, family = binomial())
-
-sol2 <- dredge(global2)
-head(sol2)
-
-importance(sol2) 
-
-toplo1 <- sol1 %>% 
-  importance %>% 
-  data.frame(importance = .) %>% 
-  rownames_to_column('var') %>% 
-  mutate(model = 'abundance')
-
-toplo2<- sol2 %>% 
-  importance %>% 
-  data.frame(importance = .) %>% 
-  rownames_to_column('var') %>% 
-  mutate(model = 'p/a')  
-toplo <- rbind(toplo1, toplo2) %>% 
-  arrange(model, importance) %>% 
-  mutate(var = factor(var, levels = unique(var)))
-
-ggplot(toplo, aes(x = var, y = importance, fill = model)) +
-  geom_bar(stat = 'identity', position = 'dodge') +
-  coord_flip() + 
+ggplot(toplo, aes(x = var, y = Importance, fill = factor(depth))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + 
   theme_bw() + 
-  theme(axis.title.y = element_blank())
-                  
+  facet_wrap(~ res)
+
+ggplot(toplo, aes(x = var, y = Estimate, group = factor(depth), fill = factor(depth))) + 
+  geom_bar(stat = 'identity', position = 'dodge') + 
+  # geom_errorbar(aes(ymin = Estimate - Xalpha005, ymax = Estimate + Xalpha005), position = 'dodge') +
+  theme_bw() + 
+  facet_wrap(~ res, scales = 'free_y')
+
 ```
+
 
