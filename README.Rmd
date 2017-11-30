@@ -21,7 +21,6 @@ opts_chunk$set(warning = F, message = F)
 library(tidyverse)
 library(GGally)
 library(MuMIn)
-library(gbm)
 
 source('R/vif_func.R')
 
@@ -43,7 +42,9 @@ tomod <- envdat %>%
 ```
 ```{r, fig.height = 8, fig.width = 8}
 kpvars <- vif_func(tomod[, -c(1, 2)], trace = F, thresh = 7000)
-kpvars
+kpvars <- kpvars[!kpvars %in% 'pCO2'] %>% 
+  gsub('\\.at\\.this.*', '', .)
+kpvars 
 
 # correlation matrix to plot
 toplo <- tomod[, kpvars]
@@ -88,7 +89,9 @@ toplo2<- sol2 %>%
   data.frame(importance = .) %>% 
   rownames_to_column('var') %>% 
   mutate(model = 'p/a')  
-toplo <- rbind(toplo1, toplo2)
+toplo <- rbind(toplo1, toplo2) %>% 
+  arrange(model, importance) %>% 
+  mutate(var = factor(var, levels = unique(var)))
 
 ggplot(toplo, aes(x = var, y = importance, fill = model)) +
   geom_bar(stat = 'identity', position = 'dodge') +
@@ -97,29 +100,6 @@ ggplot(toplo, aes(x = var, y = importance, fill = model)) +
   theme(axis.title.y = element_blank())
                   
 ```
-
-#### Boosted regression trees
-
-```{r}
-kpvars <- c('Salinity', 'Temperature', 'Spice', 'pH', 'Phosphate')
-
-# abundance model
-formin <- kpvars %>% 
-  paste(., collapse = ' + ') %>% 
-  paste('log(1 + abundances)', ., sep = ' ~ ') %>% 
-  formula
-gbmod <- gbm(formin, data = tomod, distribution = "gaussian", bag.fraction = 0.9)
-# summary(gbmod)
-
-# pa model
-formin <- kpvars %>% 
-  paste(., collapse = ' + ') %>% 
-  paste('pa', ., sep = ' ~ ') %>% 
-  formula
-gbmod <- gbm(formin, data = tomod, distribution = "bernoulli", bag.fraction = 0.9)
-# summary(gbmod)
-```
-
 
 ### 100 meters
 
@@ -140,6 +120,8 @@ tomod <- envdat %>%
 ```
 ```{r, fig.height = 8, fig.width = 8}
 kpvars <- vif_func(tomod[, -c(1, 2)], trace = F, thresh = 7000)
+kpvars <- kpvars[!kpvars %in% 'pCO2'] %>% 
+  gsub('\\.at\\.this.*', '', .)
 kpvars
 
 # correlation matrix to plot
@@ -185,7 +167,9 @@ toplo2<- sol2 %>%
   data.frame(importance = .) %>% 
   rownames_to_column('var') %>% 
   mutate(model = 'p/a')  
-toplo <- rbind(toplo1, toplo2)
+toplo <- rbind(toplo1, toplo2) %>% 
+  arrange(model, importance) %>% 
+  mutate(var = factor(var, levels = unique(var)))
 
 ggplot(toplo, aes(x = var, y = importance, fill = model)) +
   geom_bar(stat = 'identity', position = 'dodge') +
