@@ -1,7 +1,8 @@
 ---
 title: "README"
 output: 
-  html_document
+  html_document:
+    keep_md: true
 self_contained: yes
 ---
 
