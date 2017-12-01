@@ -21,7 +21,7 @@
 \usepackage{pdflscape}
 
 % housekeeping
-<<echo = F, message = F, results = F, cache = F>>=
+<<echo = F, message = F, results = F, cache = F, warning = F>>=
 library(knitr)
 opts_chunk$set(warning = F, message = F)
 
@@ -45,7 +45,7 @@ data(envdat)
 
 <<echo = F>>=
 # exp vars to use
-kpvars <- c('pH', 'Temperature', 'Salinity', 'Ammonia', 'Aragonite')
+kpvars <- c('pH', 'Ammonia', 'Oxygen', 'Nitrate', 'Fluorescence', 'Temperature', 'Salinity', 'Alkalinity', 'Aragonite')
 
 # model globals
 resp <- c(
@@ -136,7 +136,7 @@ mods <- tomod %>%
   select(-moddat)
 @
 
-<<fig.height = 6, fig.width = 7, fig.cap = 'Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep depths. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each variable independent of all other variables.', echo = F>>=
+<<fig.height = 6, fig.width = 7, fig.cap = 'Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep water. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each variable independent of all other variables.', echo = F>>=
 # toplot
 toplo <- mods %>% 
   select(-tops) %>% 
@@ -161,6 +161,7 @@ thm <- theme_bw(base_family = 'serif') +
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
 
+# importance
 toplo1 <- toplo %>% 
   arrange(res, -Importance) %>% 
   mutate(var = factor(var, levels = unique(var)))
@@ -172,6 +173,7 @@ p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`)) +
   ggtitle('Variable\nimportance') + 
   scale_fill_manual(values = c('lightgrey', 'darkgrey'))
 
+# estimates
 toplo2 <- toplo %>% 
   arrange(res, -Estimate) %>% 
   mutate(var = factor(var, levels = unique(var)))
@@ -185,6 +187,7 @@ p2 <- ggplot(toplo2, aes(x = var, y = Estimate, group = `Depth (m)`, fill = `Dep
 pleg <- g_legend(p2)
 p2 <- p2 + theme(legend.position = 'none')
 
+# unconditional variance
 toplo3 <- toplo %>% 
   arrange(res, -Uncondvariance) %>% 
   mutate(var = factor(var, levels = unique(var)))
@@ -192,7 +195,7 @@ p3 <- ggplot(toplo3, aes(x = var, y = Uncondvariance, group = `Depth (m)`, fill 
   geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
   facet_wrap(~ res, scales = 'free_y', ncol = 1) +
   thm + 
-  ggtitle('Unconditional explained\nvariance') + 
+  ggtitle('Unconditional explained\nvariance (%)') + 
   scale_fill_manual(values = c('lightgrey', 'darkgrey'))
 pleg <- g_legend(p3)
 p3 <- p3 + theme(legend.position = 'none')
@@ -205,17 +208,18 @@ grid.arrange(
 @
 \clearpage
 
+\begin{landscape}
+\centering\vspace*{\fill}
 <<results = 'asis', echo = F>>=
 # tabular
 totab <- mods %>% 
   select(-cffs) %>% 
   mutate(
     tops = map(tops, function(x){
-  
+
       x <- x %>%
         mutate(model = 1:nrow(.)) %>% 
         gather('var', 'val', -model) %>% 
-        na.omit %>% 
         mutate(
           val = round(val, 2),
           val = as.character(val)
@@ -238,7 +242,7 @@ abutab <- totab %>%
   unnest %>% 
   mutate(depth = paste(depth, 'm'))
 
-cap.val<-paste0('Top five selected models for crab abundance at shallow and deep depths. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
 cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
 latex(
@@ -250,7 +254,7 @@ latex(
   rgroup = names(table(abutab$depth)),
   n.rgroup = table(abutab$depth),
   rowname = abutab$model,
-  size = 'footnotesize', 
+  size = 'scriptsize', 
   label = 'tab:abutab'
   )
 
@@ -260,7 +264,7 @@ patab <- totab %>%
   select(-res) %>% 
   unnest
 
-cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep depths. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
 cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
 latex(
@@ -272,17 +276,23 @@ latex(
   rgroup = names(table(patab$depth)),
   n.rgroup = table(patab$depth),
   rowname = patab$model,
-  size = 'footnotesize', 
+  size = 'scriptsize', 
   label = 'tab:patab'
   )
 
+@
+\end{landscape}
+
+\begin{landscape}
+\centering\vspace*{\fill}
+<<results = 'asis', echo = F>>=
 # carapace models
 cltab <- totab %>% 
   filter(res %in% 'Average.CL') %>% 
   select(-res) %>% 
   unnest
 
-cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep depths. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
+cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
 cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
 latex(
@@ -294,9 +304,10 @@ latex(
   rgroup = names(table(cltab$depth)),
   n.rgroup = table(cltab$depth),
   rowname = cltab$model,
-  size = 'footnotesize', 
+  size = 'scriptsize', 
   label = 'tab:cltab'
   )
 @
+\end{landscape}
 
 \end{document}

@@ -71,24 +71,7 @@
 \usepackage{pdflscape}
 
 % housekeeping
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
 
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'tidyr' was built under R version 3.4.2}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'purrr' was built under R version 3.4.2}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'dplyr' was built under R version 3.4.2}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'GGally' was built under R version 3.4.2}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'glmulti' was built under R version 3.4.2}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'rJava' was built under R version 3.4.2}}
-
-{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'MuMIn' was built under R version 3.4.2}}\end{kframe}
-\end{knitrout}
 
 \linespread{1}
 \IfFileExists{upquote.sty}{\usepackage{upquote}}{}
@@ -108,88 +91,96 @@
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-5-1} \caption[Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep depths]{Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep depths. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\%) is the effect of each variable independent of all other variables.}\label{fig:unnamed-chunk-5}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-5-1} \caption[Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep water]{Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep water. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\%) is the effect of each variable independent of all other variables.}\label{fig:unnamed-chunk-5}
 \end{figure}
 
 
 \end{knitrout}
 \clearpage
 
-%latex.default(abutab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(abutab$depth)),     n.rgroup = table(abutab$depth), rowname = abutab$model, size = "footnotesize",     label = "tab:abutab")%
+\begin{landscape}
+\centering\vspace*{\fill}
+%latex.default(abutab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(abutab$depth)),     n.rgroup = table(abutab$depth), rowname = abutab$model, size = "scriptsize",     label = "tab:abutab")%
 \begin{table}[!tbp]
-{\footnotesize
-\caption{Top five selected models for crab abundance at shallow and deep depths. Input variables were ammonia, aragonite, ph, salinity, and temperature. All explanatory variables were scaled and centered.\label{tab:abutab}} 
+{\scriptsize
+\caption{Top five selected models for crab abundance at shallow and deep water. Input variables were alkalinity, ammonia, aragonite, fluorescence, nitrate, oxygen, ph, salinity, and temperature. All explanatory variables were scaled and centered.\label{tab:abutab}} 
 \begin{center}
-\begin{tabular}{llllllllll}
+\begin{tabular}{lllllllllllllll}
 \hline\hline
-\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{Ammonia}&\multicolumn{1}{c}{Aragonite}&\multicolumn{1}{c}{pH}&\multicolumn{1}{c}{Temperature}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}\tabularnewline
+\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{Alkalinity}&\multicolumn{1}{c}{Ammonia}&\multicolumn{1}{c}{Aragonite}&\multicolumn{1}{c}{Fluorescence}&\multicolumn{1}{c}{Nitrate}&\multicolumn{1}{c}{Oxygen}&\multicolumn{1}{c}{pH}&\multicolumn{1}{c}{Salinity}&\multicolumn{1}{c}{Temperature}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}\tabularnewline
 \hline
-{\bfseries 10 m}&&&&&&&&&\tabularnewline
-~~1&1.63&-&-&2.15&-1.88&4&-49.42&108.95&0\tabularnewline
-~~2&1.08&1.02&-&2.51&-1.37&5&-48.13&109.58&0.64\tabularnewline
-~~3&0.41&1.72&2.08&-&-&4&-49.81&109.72&0.78\tabularnewline
-~~4&0.17&1.55&-&2.32&-&4&-49.89&109.89&0.94\tabularnewline
-~~5&1.31&1.22&2.18&-&-1.27&5&-48.29&109.9&0.96\tabularnewline
+{\bfseries 10 m}&&&&&&&&&&&&&&\tabularnewline
+~~1&0.19&-&1.27&-&-&-&2.25&-&-&-&4&-48.36&106.83&0\tabularnewline
+~~2&1.36&-&-&-&-&-&1.97&-&-&-1.37&4&-48.73&107.57&0.75\tabularnewline
+~~3&1.57&-&-&-&0.98&-&-&-&-&-&3&-50.47&108.13&1.31\tabularnewline
+~~4&1.74&-&0.88&-&0.97&-&-&-&-&-&4&-49.17&108.45&1.63\tabularnewline
+~~5&-0.26&-&1.49&-&1.2&-2.29&-&-&-&-&5&-47.58&108.49&1.66\tabularnewline
 \hline
-{\bfseries 200 m}&&&&&&&&&\tabularnewline
-~~1&1.68&0.87&-&-&&3&-51.73&110.66&0\tabularnewline
-~~2&4.35&-&2.89&-&&3&-52.22&111.65&0.99\tabularnewline
-~~3&3.59&-&-&2.01&&3&-52.24&111.67&1.01\tabularnewline
-~~4&2.87&0.66&-&1.33&&4&-50.87&111.84&1.18\tabularnewline
-~~5&3.32&0.65&1.84&-&&4&-50.95&112&1.34\tabularnewline
+{\bfseries 200 m}&&&&&&&&&&&&&&\tabularnewline
+~~1&4.27&-&-&-&-&-&2.83&-&-&-&3&-50.92&109.03&0\tabularnewline
+~~2&4.41&-&-&-&1.34&-&2.53&-&-&-&4&-49.61&109.33&0.29\tabularnewline
+~~3&1.68&-&0.87&-&-&-&-&-&-&-&3&-51.73&110.66&1.63\tabularnewline
+~~4&3.54&-&0.45&-&-&-&2.08&-&-&-&4&-50.36&110.83&1.8\tabularnewline
+~~5&3.78&-&-&-&-&-2.14&-&-&-&-&3&-51.88&110.97&1.93\tabularnewline
 \hline
 \end{tabular}\end{center}}
 \end{table}
-%latex.default(patab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(patab$depth)),     n.rgroup = table(patab$depth), rowname = patab$model, size = "footnotesize",     label = "tab:patab")%
+%latex.default(patab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(patab$depth)),     n.rgroup = table(patab$depth), rowname = patab$model, size = "scriptsize",     label = "tab:patab")%
 \begin{table}[!tbp]
-{\footnotesize
-\caption{Top five selected models for crab presence/absence at shallow and deep depths. Input variables were ammonia, aragonite, ph, salinity, and temperature. All explanatory variables were scaled and centered.\label{tab:patab}} 
+{\scriptsize
+\caption{Top five selected models for crab presence/absence at shallow and deep water. Input variables were alkalinity, ammonia, aragonite, fluorescence, nitrate, oxygen, ph, salinity, and temperature. All explanatory variables were scaled and centered.\label{tab:patab}} 
 \begin{center}
-\begin{tabular}{lllllllllll}
+\begin{tabular}{lllllllllllllll}
 \hline\hline
-\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{Ammonia}&\multicolumn{1}{c}{Aragonite}&\multicolumn{1}{c}{pH}&\multicolumn{1}{c}{Salinity}&\multicolumn{1}{c}{Temperature}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}\tabularnewline
+\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{Alkalinity}&\multicolumn{1}{c}{Ammonia}&\multicolumn{1}{c}{Aragonite}&\multicolumn{1}{c}{Fluorescence}&\multicolumn{1}{c}{Nitrate}&\multicolumn{1}{c}{Oxygen}&\multicolumn{1}{c}{pH}&\multicolumn{1}{c}{Salinity}&\multicolumn{1}{c}{Temperature}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}\tabularnewline
 \hline
-{\bfseries 10}&&&&&&&&&&\tabularnewline
-~~1&-0.34&-&-&2.15&-&-2.32&3&-12.07&31.34&0\tabularnewline
-~~2&0.07&-&1.73&-&-&-2.4&3&-12.41&32.01&0.68\tabularnewline
-~~3&-0.83&1.48&-&2.63&-&-1.83&4&-10.99&32.09&0.75\tabularnewline
-~~4&-1.87&1.93&-&2.12&-&-&3&-12.69&32.57&1.23\tabularnewline
-~~5&1.41&-&-&-&-1.04&-2.7&3&-12.76&32.72&1.39\tabularnewline
+{\bfseries 10}&&&&&&&&&&&&&&\tabularnewline
+~~1&-0.79&-&-&-&-&-&2.29&-&-&-1.75&3&-11.73&30.65&0\tabularnewline
+~~2&-2.04&-&1.56&-&-&-&2.34&-&-&-&3&-11.81&30.83&0.18\tabularnewline
+~~3&-0.59&-&-&-&0.95&-&-&-&-&-&2&-13.23&31.04&0.39\tabularnewline
+~~4&-0.44&-&1.09&-&0.93&-&-&-&-&-&3&-11.94&31.07&0.42\tabularnewline
+~~5&-0.34&-&-&-&-&-&-&2.15&-&-2.32&3&-12.07&31.34&0.69\tabularnewline
 \hline
-{\bfseries 200}&&&&&&&&&&\tabularnewline
-~~1&2.53&1.35&-&3.37&-&&3&-10.74&28.67&0\tabularnewline
-~~2&-0.43&1.39&-&-&-&&2&-12.4&29.36&0.69\tabularnewline
-~~3&2.85&1.19&3.77&-&-&&3&-11.18&29.57&0.9\tabularnewline
-~~4&4.43&1.42&-&4.16&-1.86&&4&-9.94&29.98&1.31\tabularnewline
-~~5&2.55&-&-&3.54&-&&2&-12.91&30.4&1.72\tabularnewline
-\hline
-\end{tabular}\end{center}}
-\end{table}
-%latex.default(cltab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(cltab$depth)),     n.rgroup = table(cltab$depth), rowname = cltab$model, size = "footnotesize",     label = "tab:cltab")%
-\begin{table}[!tbp]
-{\footnotesize
-\caption{Top five selected models for crab carapace length at shallow and deep depths. Input variables were ammonia, aragonite, ph, salinity, and temperature.  All explanatory variables were scaled and centered.\label{tab:cltab}} 
-\begin{center}
-\begin{tabular}{lllllllllll}
-\hline\hline
-\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{Ammonia}&\multicolumn{1}{c}{Aragonite}&\multicolumn{1}{c}{Salinity}&\multicolumn{1}{c}{Temperature}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}&\multicolumn{1}{c}{pH}\tabularnewline
-\hline
-{\bfseries 10}&&&&&&&&&&\tabularnewline
-~~1&6.59&-&-&-&-&2&6.99&-8.28&0&\tabularnewline
-~~2&6.65&-&-&-&-0.11&3&8.27&-6.54&1.74&\tabularnewline
-~~3&6.58&0.04&-&-&-&3&7.48&-4.97&3.31&\tabularnewline
-~~4&6.62&-&-&0.06&-&3&7.43&-4.87&3.41&\tabularnewline
-~~5&6.6&-&-0.01&-&-&3&7.02&-4.03&4.24&\tabularnewline
-\hline
-{\bfseries 200}&&&&&&&&&&\tabularnewline
-~~1&6.59&&-&-&-&2&6.99&-8.28&0&-\tabularnewline
-~~2&6.6&&-&-0.04&-&3&7.13&-4.26&4.02&-\tabularnewline
-~~3&6.55&&-&-&-0.05&3&7.11&-4.23&4.05&-\tabularnewline
-~~4&6.56&&-0.04&-&-&3&7.04&-4.08&4.2&-\tabularnewline
-~~5&6.6&&-&-&-&3&7.03&-4.06&4.21&0.03\tabularnewline
+{\bfseries 200}&&&&&&&&&&&&&&\tabularnewline
+~~1&5.06&-&-&-&2.75&-&5.22&-&-&-&3&-9.15&25.49&0\tabularnewline
+~~2&3.84&-&1.36&-&-&-&4.72&-&-&-&3&-9.89&26.98&1.49\tabularnewline
+~~3&7.3&24.78&-&-&-&-&7.14&-&-24.62&-&4&-8.5&27.11&1.62\tabularnewline
+~~4&4.71&-&-&-&2.86&-&-&5.03&-&-&3&-10.08&27.37&1.88\tabularnewline
+~~5&4.06&-&-&-&2.93&-&5.72&-&-&-1.63&4&-8.89&27.89&2.4\tabularnewline
 \hline
 \end{tabular}\end{center}}
 \end{table}
 
+\end{landscape}
+
+\begin{landscape}
+\centering\vspace*{\fill}
+%latex.default(cltab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(cltab$depth)),     n.rgroup = table(cltab$depth), rowname = cltab$model, size = "scriptsize",     label = "tab:cltab")%
+\begin{table}[!tbp]
+{\scriptsize
+\caption{Top five selected models for crab carapace length at shallow and deep water. Input variables were alkalinity, ammonia, aragonite, fluorescence, nitrate, oxygen, ph, salinity, and temperature.  All explanatory variables were scaled and centered.\label{tab:cltab}} 
+\begin{center}
+\begin{tabular}{lllllllllllllll}
+\hline\hline
+\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{Alkalinity}&\multicolumn{1}{c}{Ammonia}&\multicolumn{1}{c}{Aragonite}&\multicolumn{1}{c}{Fluorescence}&\multicolumn{1}{c}{Nitrate}&\multicolumn{1}{c}{Oxygen}&\multicolumn{1}{c}{pH}&\multicolumn{1}{c}{Salinity}&\multicolumn{1}{c}{Temperature}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}\tabularnewline
+\hline
+{\bfseries 10}&&&&&&&&&&&&&&\tabularnewline
+~~1&1.53&-0.1&1.56&-10.13&0.8&-2.44&1.7&8.68&2.1&4.57&11&319.88&-749.75&0\tabularnewline
+~~2&1.5&-&1.55&-10.3&0.77&-2.44&1.65&9.04&2.09&4.51&10&33.38&-266.75&483\tabularnewline
+~~3&5.4&0.09&0.34&-2.51&0.11&-0.7&-&2.99&0.59&0.53&10&12.88&-225.76&523.99\tabularnewline
+~~4&5.69&0.17&0.24&-2.29&-&-0.36&-0.06&3.08&0.53&0.3&10&11.97&-223.94&525.81\tabularnewline
+~~5&5.99&0&0.16&-1.17&0.05&-0.51&-0.12&1.59&0.36&-&10&11.94&-223.87&525.88\tabularnewline
+\hline
+{\bfseries 200}&&&&&&&&&&&&&&\tabularnewline
+~~1&6.73&0.13&-0.11&-6.12&-0.03&0.6&2.19&2.45&1.32&3.01&11&322.51&-755.03&0\tabularnewline
+~~2&6.75&-&-0.12&-5.96&-0.02&0.57&2.14&2.36&1.41&2.96&10&37.08&-274.17&480.86\tabularnewline
+~~3&6.71&0.07&-0.11&-5.83&-&0.57&2.06&2.35&1.29&2.83&10&36.82&-273.63&481.39\tabularnewline
+~~4&6.43&0.34&-&-4.07&-0.03&0.71&1.39&1.89&0.6&1.84&10&17.64&-235.27&519.76\tabularnewline
+~~5&6.33&0.75&-0.03&-4.15&0.02&0.59&1.25&2&-&1.58&10&16.35&-232.71&522.32\tabularnewline
+\hline
+\end{tabular}\end{center}}
+\end{table}
+
+\end{landscape}
 
 \end{document}
