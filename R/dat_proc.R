@@ -14,7 +14,7 @@ crnm <- c('CTD', 'unk', 'abundances', 'Average CL', 'Average CW',
 crbs <- raw$Crabs %>% 
   as.tibble %>% 
   rename_all(funs(make.names(crnm))) %>% 
-  select(CTD, abundances, pa)
+  dplyr::select(CTD, abundances, pa, Average.CL)
 
 save(crbs, file = 'data/crbs.RData', compress = 'xz')
 

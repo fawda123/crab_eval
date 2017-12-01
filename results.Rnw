@@ -1,0 +1,302 @@
+\documentclass[letterpaper,12pt]{article}
+\usepackage[top=1in,bottom=1in,left=1in,right=1in]{geometry}
+\usepackage{setspace}
+\usepackage[colorlinks=true,urlcolor=blue,citecolor=blue,linkcolor=blue]{hyperref}
+\usepackage{indentfirst}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage[final]{animate}
+\usepackage{graphicx}
+\usepackage{verbatim}
+\usepackage{rotating}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{subfig} 
+\usepackage[noae]{Sweave}
+\usepackage{cleveref}
+\usepackage[figureposition=bottom]{caption}
+\usepackage{paralist}
+\usepackage{acronym}
+\usepackage{outlines}
+\usepackage{pdflscape}
+
+% housekeeping
+<<echo = F, message = F, results = F, cache = F>>=
+library(knitr)
+opts_chunk$set(warning = F, message = F)
+
+library(tidyverse)
+library(GGally)
+library(glmulti)
+library(MuMIn)
+library(gridExtra)
+library(Hmisc)
+source('R/funcs.R')
+
+data(crbs)
+data(envdat)
+@
+
+\linespread{1}
+
+\begin{document}
+\title{Analysis of crab abundance, presence/absence, and carapace length}
+\maketitle
+
+<<echo = F>>=
+# exp vars to use
+kpvars <- c('pH', 'Temperature', 'Salinity', 'Ammonia', 'Aragonite')
+
+# model globals
+resp <- c(
+    abundances = 'log(1+val)', 
+    pa = 'val', 
+    Average.CL = 'val'
+  ) %>% 
+  enframe('res', 'resp') %>% 
+  group_by(res) %>% 
+  nest(.key = 'resp') %>% 
+  mutate(
+    resp = map(resp, ~ paste(.x, paste(kpvars, collapse = '+'), sep = '~'))
+    )
+fams <- list(
+    abundances = gaussian, 
+    pa = binomial, 
+    Average.CL = gaussian
+  ) %>% 
+  enframe('res', 'dist')
+
+# data prep, nested for mods
+tomod <- envdat %>% 
+  filter(depth %in% c(10, 200)) %>% 
+  left_join(crbs, by = 'CTD') %>% 
+  gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>% 
+  group_by(var) %>% 
+  mutate(
+    val = scale(val)
+  ) %>% 
+  spread(var, val) %>% 
+  dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>% 
+  gather('res', 'val', abundances, pa, Average.CL) %>% 
+  dplyr::select(depth, res, val, everything()) %>% 
+  group_by(depth, res) %>% 
+  nest %>% 
+  left_join(fams, by = 'res') %>% 
+  left_join(resp, by = 'res')
+
+@
+
+<<fig.height = 8, fig.width = 8, echo = F>>=
+# correlation matrix to plot
+toplo <- tomod %>% 
+  filter(res == 'abundances') %>% 
+  dplyr::select(data) %>% 
+  unnest %>% 
+  .[, c('val', kpvars)] %>% 
+  rename(abundance = val) %>% 
+  mutate(abundance = log(1 + abundance))
+  
+# plot
+ggpairs(toplo)
+@
+
+<<eval = T, fig.height = 5, fig.width = 8, echo = F>>=
+# models
+mods <- tomod %>% 
+  mutate(
+    moddat = pmap(list(data, dist, resp), function(data, dist, resp){
+
+      # filter data to remove NA
+      x <- data %>% 
+        filter(!is.na(val))
+
+      cffs <- do.call('glmulti',
+                      list(formula(resp), data = x, level = 1, method = 'h', crit = 'aicc', plotty = F, report = F, fitfunction = 'glm', family = dist)) %>%            
+        coef %>%
+        data.frame %>%
+        rownames_to_column('var')
+
+      # top five AICc models
+      globs <- glm(resp, data = x, na.action = na.pass, family = dist)
+      drdg <- dredge(globs) %>% 
+        data.frame %>% 
+        .[1:5, ]
+
+      out <- list(drdg, cffs)
+      return(out)
+      
+    })
+    
+  ) %>% 
+  select(depth, res, moddat) %>% 
+  mutate(
+    tops = map(moddat, ~ .x[[1]]),
+    cffs = map(moddat, ~ .x[[2]])
+  ) %>% 
+  select(-moddat)
+@
+
+<<fig.height = 6, fig.width = 7, fig.cap = 'Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep depths. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each variable independent of all other variables.', echo = F>>=
+# toplot
+toplo <- mods %>% 
+  select(-tops) %>% 
+  unnest %>% 
+  filter(!var %in% '(Intercept)') %>% 
+  mutate(
+    `Depth (m)` = factor(depth),
+    res = factor(res, 
+                 levels = c('abundances', 'pa', 'Average.CL'),
+                 labels = c('Abundance', 'Pres./Abs.', 'Ave. carapace length'))
+    )
+names(toplo) <- gsub('\\.*', '', names(toplo))
+
+thm <- theme_bw(base_family = 'serif') + 
+  theme(
+    strip.background = element_blank(), 
+    legend.position = 'top', 
+    axis.title.x = element_blank(), 
+    axis.title.y = element_blank(),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+toplo1 <- toplo %>% 
+  arrange(res, -Importance) %>% 
+  mutate(var = factor(var, levels = unique(var)))
+p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`)) + 
+  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
+  facet_wrap(~ res, ncol = 1,scales = 'free_y') +
+  thm + 
+  theme(legend.position = 'none') + 
+  ggtitle('Variable\nimportance') + 
+  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+
+toplo2 <- toplo %>% 
+  arrange(res, -Estimate) %>% 
+  mutate(var = factor(var, levels = unique(var)))
+p2 <- ggplot(toplo2, aes(x = var, y = Estimate, group = `Depth (m)`, fill = `Depth (m)`)) + 
+  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
+  geom_hline(yintercept = 0) + 
+  facet_wrap(~ res, scales = 'free_y', ncol = 1) +
+  thm + 
+  ggtitle('Pooled parameter\nestimates') + 
+  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+pleg <- g_legend(p2)
+p2 <- p2 + theme(legend.position = 'none')
+
+toplo3 <- toplo %>% 
+  arrange(res, -Uncondvariance) %>% 
+  mutate(var = factor(var, levels = unique(var)))
+p3 <- ggplot(toplo3, aes(x = var, y = Uncondvariance, group = `Depth (m)`, fill = `Depth (m)`)) + 
+  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
+  facet_wrap(~ res, scales = 'free_y', ncol = 1) +
+  thm + 
+  ggtitle('Unconditional explained\nvariance') + 
+  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+pleg <- g_legend(p3)
+p3 <- p3 + theme(legend.position = 'none')
+
+grid.arrange(
+  pleg, 
+  arrangeGrob(p1, p3, p2, ncol = 3), 
+  ncol = 1, heights = c(0.1, 1)
+)
+@
+\clearpage
+
+<<results = 'asis', echo = F>>=
+# tabular
+totab <- mods %>% 
+  select(-cffs) %>% 
+  mutate(
+    tops = map(tops, function(x){
+  
+      x <- x %>%
+        mutate(model = 1:nrow(.)) %>% 
+        gather('var', 'val', -model) %>% 
+        na.omit %>% 
+        mutate(
+          val = round(val, 2),
+          val = as.character(val)
+        ) %>% 
+        spread(var, val, fill = '-')
+      x <- x[, c('model', 'X.Intercept.', names(x)[names(x) %in% kpvars], 'df', 'logLik', 'AICc', 'delta')]
+      
+      x <- x %>% 
+        rename(Int. = X.Intercept.)
+      
+      return(x) 
+      
+    })
+  )
+  
+# abundance table
+abutab <- totab %>% 
+  filter(res %in% 'abundances') %>% 
+  select(-res) %>% 
+  unnest %>% 
+  mutate(depth = paste(depth, 'm'))
+
+cap.val<-paste0('Top five selected models for crab abundance at shallow and deep depths. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+latex(
+  abutab[, -c(1, 2)],
+  file = '',
+  rowlabel = 'Models',
+  caption = cap.val,
+  caption.loc = 'top',
+  rgroup = names(table(abutab$depth)),
+  n.rgroup = table(abutab$depth),
+  rowname = abutab$model,
+  size = 'footnotesize', 
+  label = 'tab:abutab'
+  )
+
+# pa table
+patab <- totab %>% 
+  filter(res %in% 'pa') %>% 
+  select(-res) %>% 
+  unnest
+
+cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep depths. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+latex(
+  patab[, -c(1, 2)],
+  file = '',
+  rowlabel = 'Models',
+  caption = cap.val,
+  caption.loc = 'top',
+  rgroup = names(table(patab$depth)),
+  n.rgroup = table(patab$depth),
+  rowname = patab$model,
+  size = 'footnotesize', 
+  label = 'tab:patab'
+  )
+
+# carapace models
+cltab <- totab %>% 
+  filter(res %in% 'Average.CL') %>% 
+  select(-res) %>% 
+  unnest
+
+cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep depths. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
+cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+latex(
+  cltab[, -c(1, 2)],
+  file = '',
+  rowlabel = 'Models',
+  caption = cap.val,
+  caption.loc = 'top',
+  rgroup = names(table(cltab$depth)),
+  n.rgroup = table(cltab$depth),
+  rowname = cltab$model,
+  size = 'footnotesize', 
+  label = 'tab:cltab'
+  )
+@
+
+\end{document}
