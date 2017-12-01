@@ -45,7 +45,7 @@ data(envdat)
 
 <<echo = F>>=
 # exp vars to use
-kpvars <- c('pH', 'Ammonia', 'Oxygen', 'Nitrate', 'Fluorescence', 'Temperature', 'Salinity', 'Alkalinity', 'Aragonite')
+kpvars <- c('pH', 'Temperature', 'Salinity', 'Aragonite', 'Oxygen')
 
 # model globals
 resp <- c(
@@ -68,7 +68,7 @@ fams <- list(
 
 # data prep, nested for mods
 tomod <- envdat %>% 
-  filter(depth %in% c(10, 200)) %>% 
+  filter(depth %in% c(30, 100)) %>% 
   left_join(crbs, by = 'CTD') %>% 
   gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>% 
   group_by(var) %>% 
@@ -79,6 +79,7 @@ tomod <- envdat %>%
   dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>% 
   gather('res', 'val', abundances, pa, Average.CL) %>% 
   dplyr::select(depth, res, val, everything()) %>% 
+  filter(Salinity > -2) %>% 
   group_by(depth, res) %>% 
   nest %>% 
   left_join(fams, by = 'res') %>% 
