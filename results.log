@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (MiKTeX 2.9.6350 64-bit) (preloaded format=pdflatex 2017.9.18)  1 DEC 2017 11:56
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (MiKTeX 2.9.6350 64-bit) (preloaded format=pdflatex 2017.9.18)  4 DEC 2017 16:36
 entering extended mode
 **./results.tex
 (results.tex
@@ -535,7 +535,7 @@ Package caption Info: rotating package is loaded.
 \c@lotdepth=\count284
 \sf@top=\skip63
 \sf@bottom=\skip64
-) (C:/PROGRA~1/R/R-34~1.1/share/texmf/tex/latex\Sweave.sty
+) (C:/PROGRA~1/R/R-34~1.3/share/texmf/tex/latex\Sweave.sty
 Package: Sweave 
 
 (C:\Users\Marcus.SCCWRP2K\AppData\Roaming\MiKTeX\2.9\tex\latex\fancyvrb\fancyvr
@@ -829,33 +829,44 @@ Package pdftex.def Info: figure/unnamed-chunk-5-1.pdf used on input line 94.
 
 {C:/Users/Marcus.SCCWRP2K/AppData/Local/MiKTeX/2.9/pdftex/config/pdftex.map} <.
 /figure/unnamed-chunk-3-1.pdf>] [2 <./figure/unnamed-chunk-5-1.pdf>]
+Package color Info: Redefining color shadecolor on input line 102.
+
+<figure/unnamed-chunk-6-1.pdf, id=27, 505.89pt x 216.81pt>
+File: figure/unnamed-chunk-6-1.pdf Graphic file (type pdf)
+
+<use figure/unnamed-chunk-6-1.pdf>
+Package pdftex.def Info: figure/unnamed-chunk-6-1.pdf used on input line 103.
+(pdftex.def)             Requested size: 469.75502pt x 201.32684pt.
+ [3 <./figure/unnamed-chunk-6-1.pdf>]
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <8> on input line 108.
+(Font)              <8> on input line 117.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <6> on input line 108.
+(Font)              <6> on input line 117.
 LaTeX Font Info:    External font `cmex10' loaded for size
-(Font)              <5> on input line 108.
- [3
+(Font)              <5> on input line 117.
+
+[4
 
 
-] [4
+
+] [5
 
 
 ]
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 186.
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 186.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 195.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 195.
  (results.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 186.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 186.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 195.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 195.
 Package rerunfilecheck Info: File `results.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 186.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 195.
  ) 
 Here is how much of TeX's memory you used:
- 18828 strings out of 493323
- 342173 string characters out of 3139036
- 451240 words of memory out of 3000000
- 22180 multiletter control sequences out of 15000+200000
+ 18839 strings out of 493323
+ 342441 string characters out of 3139036
+ 450240 words of memory out of 3000000
+ 22188 multiletter control sequences out of 15000+200000
  533914 words of font info for 34 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
  61i,9n,96p,10413b,457s stack positions out of 5000i,500n,10000p,200000b,50000s
@@ -863,9 +874,9 @@ Here is how much of TeX's memory you used:
 gram Files/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr12.pfb><C:/Program File
 s/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr17.pfb><C:/Program Files/MiKTeX 
 2.9/fonts/type1/public/amsfonts/cm/cmr8.pfb>
-Output written on results.pdf (4 pages, 135898 bytes).
+Output written on results.pdf (5 pages, 128069 bytes).
 PDF statistics:
- 57 PDF objects out of 1000 (max. 8388607)
- 9 named destinations out of 1000 (max. 500000)
- 11 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 73 PDF objects out of 1000 (max. 8388607)
+ 11 named destinations out of 1000 (max. 500000)
+ 16 words of extra memory for PDF output out of 10000 (max. 10000000)
 

@@ -31,6 +31,7 @@ library(glmulti)
 library(MuMIn)
 library(gridExtra)
 library(Hmisc)
+library(ggord)
 source('R/funcs.R')
 
 data(crbs)
@@ -45,7 +46,7 @@ data(envdat)
 
 <<echo = F>>=
 # exp vars to use
-kpvars <- c('pH', 'Temperature', 'Salinity', 'Aragonite', 'Oxygen')
+kpvars <- c('Fluorescence', 'Salinity', 'Nitrate', 'Oxygen')
 
 # model globals
 resp <- c(
@@ -164,7 +165,8 @@ thm <- theme_bw(base_family = 'serif') +
 
 # importance
 toplo1 <- toplo %>% 
-  arrange(res, -Importance) %>% 
+  group_by(res) %>% 
+  arrange(depth, -Importance) %>% 
   mutate(var = factor(var, levels = unique(var)))
 p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`)) + 
   geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
@@ -176,11 +178,13 @@ p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`)) +
 
 # estimates
 toplo2 <- toplo %>% 
-  arrange(res, -Estimate) %>% 
+  group_by(res) %>% 
+  arrange(depth, -Estimate) %>% 
   mutate(var = factor(var, levels = unique(var)))
 p2 <- ggplot(toplo2, aes(x = var, y = Estimate, group = `Depth (m)`, fill = `Depth (m)`)) + 
   geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
   geom_hline(yintercept = 0) + 
+  geom_errorbar(aes(ymin = Estimate - Xalpha005, ymax = Estimate + Xalpha005, group = `Depth (m)`), position = 'dodge') +
   facet_wrap(~ res, scales = 'free_y', ncol = 1) +
   thm + 
   ggtitle('Pooled parameter\nestimates') + 
@@ -190,7 +194,8 @@ p2 <- p2 + theme(legend.position = 'none')
 
 # unconditional variance
 toplo3 <- toplo %>% 
-  arrange(res, -Uncondvariance) %>% 
+  group_by(res) %>% 
+  arrange(depth, -Uncondvariance) %>% 
   mutate(var = factor(var, levels = unique(var)))
 p3 <- ggplot(toplo3, aes(x = var, y = Uncondvariance, group = `Depth (m)`, fill = `Depth (m)`)) + 
   geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
@@ -206,6 +211,32 @@ grid.arrange(
   arrangeGrob(p1, p3, p2, ncol = 3), 
   ncol = 1, heights = c(0.1, 1)
 )
+@
+\clearpage
+
+<<fig.height = 3, fig.width = 7, fig.cap = 'PCA results', echo = F>>=
+# correlation matrix to plot
+pcamod <- tomod %>% 
+  filter(res == 'abundances') %>% 
+  dplyr::select(depth, data) %>% 
+  mutate(
+    pca = map(data, ~ prcomp(.x[, !names(.x) %in% 'val'], center = F, scale. = F))
+  )
+
+ptszs <- tomod %>% 
+  filter(res == 'abundances') %>% 
+  mutate(val = map(data, ~ log(1 + .x$val)))
+
+p1 <- ggord(pcamod$pca[[1]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[1]], 
+            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
+  ggtitle(paste(pcamod$depth[1], 'm')) + 
+  theme_bw(base_family = 'serif')
+p2 <- ggord(pcamod$pca[[2]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[2]], 
+            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
+  ggtitle(paste(pcamod$depth[2], 'm')) + 
+  theme_bw(base_family = 'serif')
+grid.arrange(p1, p2, ncol = 2) 
+
 @
 \clearpage
 
