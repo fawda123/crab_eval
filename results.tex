@@ -79,11 +79,13 @@
 \title{Analysis of crab abundance, presence/absence, and carapace length}
 \maketitle
 
+\section{Regression}
+
 
 
 \begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-3-1} 
+\includegraphics[width=0.8\textwidth]{figure/unnamed-chunk-3-1} 
 
 \end{knitrout}
 
@@ -98,18 +100,9 @@
 \end{knitrout}
 \clearpage
 
-\begin{knitrout}
-\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
-\includegraphics[width=\maxwidth]{figure/unnamed-chunk-6-1} \caption[PCA results]{PCA results}\label{fig:unnamed-chunk-6}
-\end{figure}
-
-
-\end{knitrout}
-\clearpage
-
 \begin{landscape}
 \centering\vspace*{\fill}
-%latex.default(abutab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(abutab$depth)),     n.rgroup = table(abutab$depth), rowname = abutab$model, size = "scriptsize",     label = "tab:abutab")%
+%latex.default(abutab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = unique(abutab$depth),     n.rgroup = c(5, 5), rowname = abutab$model, size = "scriptsize",     label = "tab:abutab")%
 \begin{table}[!tbp]
 {\scriptsize
 \caption{Top five selected models for crab abundance at shallow and deep water. Input variables were fluorescence, nitrate, oxygen, and salinity. All explanatory variables were scaled and centered.\label{tab:abutab}} 
@@ -118,14 +111,14 @@
 \hline\hline
 \multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{Fluorescence}&\multicolumn{1}{c}{Nitrate}&\multicolumn{1}{c}{Oxygen}&\multicolumn{1}{c}{Salinity}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}\tabularnewline
 \hline
-{\bfseries 100 m}&&&&&&&&&\tabularnewline
+{\bfseries 30 m}&&&&&&&&&\tabularnewline
 ~~1&2.68&-&1.49&-&-2.17&4&-47.51&105.24&0\tabularnewline
 ~~2&1.43&0.87&-&-&-1.88&4&-47.6&105.43&0.19\tabularnewline
 ~~3&2.13&0.48&0.89&-&-2.12&5&-47.04&107.61&2.37\tabularnewline
 ~~4&1.78&0.86&-&-0.57&-2.29&5&-47.22&107.96&2.72\tabularnewline
 ~~5&1.75&-&-&-&-1.51&3&-50.42&108.11&2.86\tabularnewline
 \hline
-{\bfseries 30 m}&&&&&&&&&\tabularnewline
+{\bfseries 100 m}&&&&&&&&&\tabularnewline
 ~~1&3.16&1.29&-&-&-1.99&4&-47.66&105.54&0\tabularnewline
 ~~2&2.75&-&-&-&-1.85&3&-49.78&106.83&1.29\tabularnewline
 ~~3&3.2&1.74&-&1.24&-&4&-49.03&108.27&2.73\tabularnewline
@@ -134,7 +127,7 @@
 \hline
 \end{tabular}\end{center}}
 \end{table}
-%latex.default(patab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(patab$depth)),     n.rgroup = table(patab$depth), rowname = patab$model, size = "scriptsize",     label = "tab:patab")%
+%latex.default(patab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = unique(patab$depth),     n.rgroup = c(5, 5), rowname = patab$model, size = "scriptsize",     label = "tab:patab")%
 \begin{table}[!tbp]
 {\scriptsize
 \caption{Top five selected models for crab presence/absence at shallow and deep water. Input variables were fluorescence, nitrate, oxygen, and salinity. All explanatory variables were scaled and centered.\label{tab:patab}} 
@@ -164,7 +157,7 @@
 
 \begin{landscape}
 \centering\vspace*{\fill}
-%latex.default(cltab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = names(table(cltab$depth)),     n.rgroup = table(cltab$depth), rowname = cltab$model, size = "scriptsize",     label = "tab:cltab")%
+%latex.default(cltab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = unique(cltab$depth),     n.rgroup = c(5, 5), rowname = cltab$model, size = "scriptsize",     label = "tab:cltab")%
 \begin{table}[!tbp]
 {\scriptsize
 \caption{Top five selected models for crab carapace length at shallow and deep water. Input variables were fluorescence, nitrate, oxygen, and salinity.  All explanatory variables were scaled and centered.\label{tab:cltab}} 
@@ -188,6 +181,85 @@
 ~~5&6.59&0&-&-&-&3&7&-4&4.28\tabularnewline
 \hline
 \end{tabular}\end{center}}
+\end{table}
+
+\end{landscape}
+
+\section{PCA regression}
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}[!h]
+\includegraphics[width=0.9\textwidth]{figure/unnamed-chunk-8-1} \caption[PCA results, points sized by abundance]{PCA results, points sized by abundance}\label{fig:unnamed-chunk-8}
+\end{figure}
+
+
+\end{knitrout}
+
+
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{figure}
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-10-1} \caption[Results of model selection analysis with crab abundance, by shallow and deep water]{Results of model selection analysis with crab abundance, by shallow and deep water. Models were created using four principal components of input variables. Importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\%) is the effect of each axis independent of all other variables.}\label{fig:unnamed-chunk-10}
+\end{figure}
+
+
+\end{knitrout}
+
+\begin{landscape}
+\centering\vspace*{\fill}
+%latex.default(abutab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = unique(abutab$depth),     n.rgroup = c(5, 5), rowname = abutab$model, size = "scriptsize",     label = "tab:abutabpca")%
+\begin{table}[!tbp]
+{\scriptsize
+\caption{Top five selected models for crab abundance at shallow and deep water using principal component axes. Input variables for PCA were fluorescence, nitrate, oxygen, and salinity. All explanatory variables were scaled and centered.\label{tab:abutabpca}} 
+\begin{center}
+\begin{tabular}{llllllllll}
+\hline\hline
+\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{Int.}&\multicolumn{1}{c}{PC1}&\multicolumn{1}{c}{PC2}&\multicolumn{1}{c}{PC3}&\multicolumn{1}{c}{PC4}&\multicolumn{1}{c}{df}&\multicolumn{1}{c}{logLik}&\multicolumn{1}{c}{AICc}&\multicolumn{1}{c}{delta}\tabularnewline
+\hline
+{\bfseries 30 m}&&&&&&&&&\tabularnewline
+~~1&2.3&-&-&-2.31&-&3&-48.84&104.94&0\tabularnewline
+~~2&2.71&-0.54&-&-2.54&-&4&-47.48&105.18&0.24\tabularnewline
+~~3&1.77&-&-0.66&-2.01&-&4&-47.73&105.69&0.75\tabularnewline
+~~4&2.26&-&-&-2.29&-0.55&4&-48.77&107.76&2.82\tabularnewline
+~~5&2.27&-0.4&-0.41&-2.3&-&5&-47.13&107.79&2.85\tabularnewline
+\hline
+{\bfseries 100 m}&&&&&&&&&\tabularnewline
+~~1&3.19&0.82&1.69&-&-&4&-48.7&107.61&0\tabularnewline
+~~2&3.12&0.79&1.66&-1.79&-&5&-47.31&108.14&0.53\tabularnewline
+~~3&2.27&-&1.24&-&-&3&-50.54&108.33&0.72\tabularnewline
+~~4&2.24&-&1.22&-1.89&-&4&-49.22&108.66&1.05\tabularnewline
+~~5&1.94&-&-&-&-&2&-52.17&108.94&1.33\tabularnewline
+\hline
+\end{tabular}\end{center}}
+\end{table}
+
+\end{landscape}
+
+\begin{landscape}
+\centering\vspace*{\fill}
+%latex.default(tab[, -c(1, 2)], file = "", rowlabel = "Models",     caption = cap.val, caption.loc = "top", rgroup = unique(tab$depth),     n.rgroup = table(tab$depth), rowname = tab$dt, label = "tab:pcacor")%
+\begin{table}[!tbp]
+\caption{Correlations of crab abundance and input variables with principal component (PC) axes. Abundance was modelled with PC axes where the axes were created using the input variables.\label{tab:pcacor}} 
+\begin{center}
+\begin{tabular}{lllll}
+\hline\hline
+\multicolumn{1}{l}{Models}&\multicolumn{1}{c}{PC1}&\multicolumn{1}{c}{PC2}&\multicolumn{1}{c}{PC3}&\multicolumn{1}{c}{PC4}\tabularnewline
+\hline
+{\bfseries 30 m}&&&&\tabularnewline
+~~Abundance&-0.2&-0.37&-0.5*&-0.11\tabularnewline
+~~Fluorescence&-0.81*&-0.86*&-0.04&0\tabularnewline
+~~Nitrate&-0.95*&-0.38&-0.05&0\tabularnewline
+~~Oxygen&0.67*&-0.37&-0.36&0.51*\tabularnewline
+~~Salinity&-0.51*&0.12&0.91*&0.15\tabularnewline
+\hline
+{\bfseries 100 m}&&&&\tabularnewline
+~~Abundance&0.21&0.36&-0.31&0.03\tabularnewline
+~~Fluorescence&-0.36&0.99*&0.09&-0.01\tabularnewline
+~~Nitrate&-0.94*&0.37&-0.28&0.24\tabularnewline
+~~Oxygen&0.98*&-0.42*&-0.06&0.11\tabularnewline
+~~Salinity&-0.78*&0.02&0.57*&0.25\tabularnewline
+\hline
+\end{tabular}\end{center}
 \end{table}
 
 \end{landscape}

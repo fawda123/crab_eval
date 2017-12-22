@@ -44,6 +44,8 @@ data(envdat)
 \title{Analysis of crab abundance, presence/absence, and carapace length}
 \maketitle
 
+\section{Regression}
+
 <<echo = F>>=
 # exp vars to use
 kpvars <- c('Fluorescence', 'Salinity', 'Nitrate', 'Oxygen')
@@ -88,7 +90,7 @@ tomod <- envdat %>%
 
 @
 
-<<fig.height = 8, fig.width = 8, echo = F>>=
+<<fig.height = 8, fig.width = 8, echo = F, out.width = '0.8\\textwidth'>>=
 # correlation matrix to plot
 toplo <- tomod %>% 
   filter(res == 'abundances') %>% 
@@ -102,7 +104,7 @@ toplo <- tomod %>%
 ggpairs(toplo)
 @
 
-<<eval = T, fig.height = 5, fig.width = 8, echo = F>>=
+<<eval = T, echo = F>>=
 # models
 mods <- tomod %>% 
   mutate(
@@ -184,7 +186,7 @@ toplo2 <- toplo %>%
 p2 <- ggplot(toplo2, aes(x = var, y = Estimate, group = `Depth (m)`, fill = `Depth (m)`)) + 
   geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
   geom_hline(yintercept = 0) + 
-  geom_errorbar(aes(ymin = Estimate - Xalpha005, ymax = Estimate + Xalpha005, group = `Depth (m)`), position = 'dodge') +
+  # geom_errorbar(aes(ymin = Estimate - Xalpha005, ymax = Estimate + Xalpha005, group = `Depth (m)`), position = 'dodge') +
   facet_wrap(~ res, scales = 'free_y', ncol = 1) +
   thm + 
   ggtitle('Pooled parameter\nestimates') + 
@@ -211,32 +213,6 @@ grid.arrange(
   arrangeGrob(p1, p3, p2, ncol = 3), 
   ncol = 1, heights = c(0.1, 1)
 )
-@
-\clearpage
-
-<<fig.height = 3, fig.width = 7, fig.cap = 'PCA results', echo = F>>=
-# correlation matrix to plot
-pcamod <- tomod %>% 
-  filter(res == 'abundances') %>% 
-  dplyr::select(depth, data) %>% 
-  mutate(
-    pca = map(data, ~ prcomp(.x[, !names(.x) %in% 'val'], center = F, scale. = F))
-  )
-
-ptszs <- tomod %>% 
-  filter(res == 'abundances') %>% 
-  mutate(val = map(data, ~ log(1 + .x$val)))
-
-p1 <- ggord(pcamod$pca[[1]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[1]], 
-            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
-  ggtitle(paste(pcamod$depth[1], 'm')) + 
-  theme_bw(base_family = 'serif')
-p2 <- ggord(pcamod$pca[[2]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[2]], 
-            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
-  ggtitle(paste(pcamod$depth[2], 'm')) + 
-  theme_bw(base_family = 'serif')
-grid.arrange(p1, p2, ncol = 2) 
-
 @
 \clearpage
 
@@ -283,8 +259,8 @@ latex(
   rowlabel = 'Models',
   caption = cap.val,
   caption.loc = 'top',
-  rgroup = names(table(abutab$depth)),
-  n.rgroup = table(abutab$depth),
+  rgroup = unique(abutab$depth),
+  n.rgroup = c(5, 5),
   rowname = abutab$model,
   size = 'scriptsize', 
   label = 'tab:abutab'
@@ -305,8 +281,8 @@ latex(
   rowlabel = 'Models',
   caption = cap.val,
   caption.loc = 'top',
-  rgroup = names(table(patab$depth)),
-  n.rgroup = table(patab$depth),
+  rgroup = unique(patab$depth),
+  n.rgroup = c(5, 5),
   rowname = patab$model,
   size = 'scriptsize', 
   label = 'tab:patab'
@@ -333,11 +309,266 @@ latex(
   rowlabel = 'Models',
   caption = cap.val,
   caption.loc = 'top',
-  rgroup = names(table(cltab$depth)),
-  n.rgroup = table(cltab$depth),
+  rgroup = unique(cltab$depth),
+  n.rgroup = c(5, 5),
   rowname = cltab$model,
   size = 'scriptsize', 
   label = 'tab:cltab'
+  )
+@
+\end{landscape}
+
+\section{PCA regression}
+
+<<fig.height = 6, fig.width = 7, fig.cap = 'PCA results, points sized by abundance', echo = F, out.width = '0.9\\textwidth', fig.pos = '!h'>>=
+# pca models
+pcamod <- tomod %>% 
+  filter(res == 'abundances') %>% 
+  dplyr::select(depth, data) %>% 
+  mutate(
+    pca = map(data, ~ prcomp(.x[, !names(.x) %in% 'val'], center = F, scale. = F))
+  )
+
+ptszs <- tomod %>% 
+  filter(res == 'abundances') %>% 
+  mutate(val = map(data, ~ log(1 + .x$val)))
+
+p1 <- ggord(pcamod$pca[[1]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[1]], 
+            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
+  ggtitle(paste(pcamod$depth[1], 'm')) + 
+  theme_bw(base_family = 'serif')
+p2 <- ggord(pcamod$pca[[2]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[2]], 
+            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
+  ggtitle(paste(pcamod$depth[2], 'm')) + 
+  theme_bw(base_family = 'serif')
+p3 <- ggord(pcamod$pca[[1]], axes = c("3", "4"), vec_ext = 1, size = ptszs$val[[1]], 
+            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
+  ggtitle(paste(pcamod$depth[1], 'm')) + 
+  theme_bw(base_family = 'serif')
+p4 <- ggord(pcamod$pca[[2]], axes = c("3", "4"), vec_ext = 1, size = ptszs$val[[2]], 
+            coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
+  ggtitle(paste(pcamod$depth[2], 'm')) + 
+  theme_bw(base_family = 'serif')
+grid.arrange(p1, p2, p3, p4, ncol = 2) 
+
+@
+
+<<echo = F>>=
+# regressions with pca variables
+pcacoef <- pcamod %>% 
+  mutate(pcacoef = pmap(list(data, pca), function(data, pca){
+    
+    # data to model
+    tomod <- data$val %>% 
+      data.frame(val = ., predict(pca))
+    
+    # form of response model
+    resp <- 'log(1 + val) ~ PC1 + PC2 + PC3 + PC4'
+    
+    # get coefficients
+    cffs <- do.call('glmulti',
+                    list(formula(resp), data = tomod, level = 1, method = 'h', crit = 'aicc', plotty = F, report = F, fitfunction = 'glm', family = 'gaussian')) %>%            
+      coef %>%
+      data.frame %>%
+      rownames_to_column('var')
+
+    # top five AICc models
+    globs <- glm(resp, data = tomod, na.action = na.pass)
+    drdg <- dredge(globs) %>%
+      data.frame %>%
+      .[1:5, ]
+
+    out <- list(drdg, cffs)
+    return(out)
+
+    })
+  ) %>% 
+  select(depth, pcacoef) %>% 
+  mutate(
+    tops = map(pcacoef, ~ .x[[1]]),
+    cffs = map(pcacoef, ~ .x[[2]])
+  ) %>% 
+  select(-pcacoef)
+@
+
+<<fig.height = 3, fig.width = 7, fig.cap = 'Results of model selection analysis with crab abundance, by shallow and deep water. Models were created using four principal components of input variables. Importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each axis independent of all other variables.', echo = F>>=
+# toplot
+toplo <- pcacoef %>% 
+  select(-tops) %>% 
+  unnest %>% 
+  filter(!var %in% '(Intercept)') %>% 
+  mutate(
+    `Depth (m)` = factor(depth)
+    )
+names(toplo) <- gsub('\\.*', '', names(toplo))
+
+thm <- theme_bw(base_family = 'serif') + 
+  theme(
+    strip.background = element_blank(), 
+    legend.position = 'top', 
+    axis.title.x = element_blank(), 
+    axis.title.y = element_blank(),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+# importance
+toplo1 <- toplo %>% 
+  arrange(depth, -Importance) %>% 
+  mutate(var = factor(var, levels = unique(var)))
+p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`)) + 
+  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
+  thm + 
+  theme(legend.position = 'none') + 
+  ggtitle('Variable\nimportance') + 
+  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+
+# estimates
+toplo2 <- toplo %>% 
+  arrange(depth, -Estimate) %>% 
+  mutate(var = factor(var, levels = unique(var)))
+p2 <- ggplot(toplo2, aes(x = var, y = Estimate, group = `Depth (m)`, fill = `Depth (m)`)) + 
+  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
+  geom_hline(yintercept = 0) + 
+  # geom_errorbar(aes(ymin = Estimate - Xalpha005, ymax = Estimate + Xalpha005, group = `Depth (m)`), position = 'dodge') +
+  thm + 
+  ggtitle('Pooled parameter\nestimates') + 
+  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+pleg <- g_legend(p2)
+p2 <- p2 + theme(legend.position = 'none')
+
+# unconditional variance
+toplo3 <- toplo %>% 
+  arrange(depth, -Uncondvariance) %>% 
+  mutate(var = factor(var, levels = unique(var)))
+p3 <- ggplot(toplo3, aes(x = var, y = Uncondvariance, group = `Depth (m)`, fill = `Depth (m)`)) + 
+  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
+  thm + 
+  ggtitle('Unconditional explained\nvariance (%)') + 
+  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+pleg <- g_legend(p3)
+p3 <- p3 + theme(legend.position = 'none')
+
+grid.arrange(
+  pleg, 
+  arrangeGrob(p1, p3, p2, ncol = 3), 
+  ncol = 1, heights = c(0.1, 1)
+)
+@
+
+\begin{landscape}
+\centering\vspace*{\fill}
+<<results = 'asis', echo = F>>=
+# tabular
+totab <- pcacoef %>% 
+  select(-cffs) %>% 
+  mutate(
+    tops = map(tops, function(x){
+
+      x <- x %>%
+        mutate(model = 1:nrow(.)) %>% 
+        gather('var', 'val', -model) %>% 
+        mutate(
+          val = round(val, 2),
+          val = as.character(val)
+        ) %>% 
+        spread(var, val, fill = '-')
+      x <- x[, c('model', 'X.Intercept.', names(x)[grepl('^PC', names(x))], 'df', 'logLik', 'AICc', 'delta')]
+      
+      x <- x %>% 
+        rename(Int. = X.Intercept.)
+      
+      return(x) 
+      
+    })
+  )
+  
+# abundance table
+abutab <- totab %>% 
+  unnest %>% 
+  mutate(depth = paste(depth, 'm'))
+
+cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water using principal component axes. Input variables for PCA were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+latex(
+  abutab[, -c(1, 2)],
+  file = '',
+  rowlabel = 'Models',
+  caption = cap.val,
+  caption.loc = 'top',
+  rgroup = unique(abutab$depth),
+  n.rgroup = c(5, 5),
+  rowname = abutab$model,
+  size = 'scriptsize', 
+  label = 'tab:abutabpca'
+  )
+@
+\end{landscape}
+
+\begin{landscape}
+\centering\vspace*{\fill}
+<<results = 'asis', echo = F>>=
+# tabular
+totab <- pcamod %>%
+  mutate(
+    corest = pmap(list(data, pca), function(data, pca){
+      
+      dat <- data %>% 
+        mutate(val = log(1 + val))
+      
+      pcaprd <- predict(pca) %>% 
+        data.frame
+
+      mat <- crossing(dt = names(data), pc = names(pcaprd)) %>% 
+        rownames_to_column %>% 
+        group_by(rowname) %>% 
+        nest %>%
+        mutate(crs = map(data, function(x){
+    
+          tst <- cor.test(dat[[x[[1]]]], pcaprd[[x[[2]]]]) 
+          est <- tst$estimate %>% 
+            round(2)
+          pval <- tst$p.value %>% 
+            p_ast
+          
+          paste0(est, pval)
+          
+          })
+        ) %>% 
+        unnest %>% 
+        select(-rowname) %>% 
+        spread(pc, crs)
+      
+      mat
+      
+    })
+    
+  ) %>% 
+  select(-data, -pca) %>% 
+  unnest %>% 
+  mutate(
+    dt = gsub('val', 'Abundance', dt)
+  ) %>% 
+  arrange(depth, dt) %>% 
+  mutate(depth = paste(depth, 'm'))
+
+cap.val <- 'Correlations of crab abundance and input variables with principal component (PC) axes. Abundance was modelled with PC axes created using the input variables.'
+
+tab <- totab
+
+latex(
+  tab[, -c(1, 2)],
+  file = '',
+  rowlabel = 'Models',
+  caption = cap.val,
+  caption.loc = 'top',
+  rgroup = unique(tab$depth),
+  n.rgroup = table(tab$depth),
+  rowname = tab$dt,
+  # size = 'scriptsize',
+  label = 'tab:pcacor'
   )
 @
 \end{landscape}

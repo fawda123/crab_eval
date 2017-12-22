@@ -5,3 +5,15 @@ g_legend <- function(a.gplot){
   leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
   legend <- tmp$grobs[[leg]]
   return(legend)}
+
+p_ast <- function(x){
+  
+  sig_cats <- c('*', '')
+  sig_vals <- c(-Inf, 0.05, Inf)
+  
+  out <- cut(x, breaks = sig_vals, labels = sig_cats, right = FALSE)
+  out <- as.character(out)
+  
+  return(out)
+  
+}
