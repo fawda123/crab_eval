@@ -48,7 +48,7 @@ data(envdat)
 
 <<echo = F>>=
 # exp vars to use
-kpvars <- c('Fluorescence', 'Salinity', 'Nitrate', 'Oxygen')
+kpvars <- c('Fluorescence', 'Salinity', 'Nitrate', 'Oxygen', 'pH', 'Aragonite')
 
 # model globals
 resp <- c(
@@ -363,7 +363,7 @@ pcacoef <- pcamod %>%
       data.frame(val = ., predict(pca))
     
     # form of response model
-    resp <- 'log(1 + val) ~ PC1 + PC2 + PC3 + PC4'
+    resp <- paste0('log(1 + val) ~ PC1 + PC2 + PC3 + PC4')#, paste(names(tomod)[!grepl('^val$',  names(tomod))], collapse = ' + '))
     
     # get coefficients
     cffs <- do.call('glmulti',
@@ -552,7 +552,8 @@ totab <- pcamod %>%
     dt = gsub('val', 'Abundance', dt)
   ) %>% 
   arrange(depth, dt) %>% 
-  mutate(depth = paste(depth, 'm'))
+  mutate(depth = paste(depth, 'm')) %>% 
+  select(depth, dt, PC1, PC2, PC3, PC4)
 
 cap.val <- 'Correlations of crab abundance and input variables with principal component (PC) axes. Abundance was modelled with PC axes created using the input variables.'
 
