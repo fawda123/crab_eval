@@ -32,6 +32,7 @@ library(MuMIn)
 library(gridExtra)
 library(Hmisc)
 library(ggord)
+library(english)
 source('R/funcs.R')
 
 data(crbs)
@@ -391,7 +392,7 @@ pcacoef <- pcamod %>%
   select(-pcacoef)
 @
 
-<<fig.height = 3, fig.width = 7, fig.cap = 'Results of model selection analysis with crab abundance, by shallow and deep water. Models were created using four principal components of input variables. Importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each axis independent of all other variables.', echo = F>>=
+<<fig.height = 3, fig.width = 7, fig.cap = paste0('Results of model selection analysis with crab abundance, by shallow and deep water. Models were created using ', english(length(kpvars)), ' principal components of input variables. Importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each axis independent of all other variables.'), echo = F>>=
 # toplot
 toplo <- pcacoef %>% 
   select(-tops) %>% 
