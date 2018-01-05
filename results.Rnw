@@ -48,7 +48,7 @@ data(envdat)
 
 <<echo = F>>=
 # exp vars to use
-kpvars <- c('Fluorescence', 'Salinity', 'Nitrate', 'Oxygen', 'pH', 'Aragonite')
+kpvars <- c('pH', 'Temperature', 'Alkalinity')
 
 # model globals
 resp <- c(
@@ -82,7 +82,7 @@ tomod <- envdat %>%
   dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>% 
   gather('res', 'val', abundances, pa, Average.CL) %>% 
   dplyr::select(depth, res, val, everything()) %>% 
-  filter(Salinity > -2) %>% 
+  filter(Alkalinity > -2) %>%
   group_by(depth, res) %>% 
   nest %>% 
   left_join(fams, by = 'res') %>% 
@@ -341,11 +341,11 @@ p2 <- ggord(pcamod$pca[[2]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[
             coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
   ggtitle(paste(pcamod$depth[2], 'm')) + 
   theme_bw(base_family = 'serif')
-p3 <- ggord(pcamod$pca[[1]], axes = c("3", "4"), vec_ext = 1, size = ptszs$val[[1]], 
+p3 <- ggord(pcamod$pca[[1]], axes = c("1", "3"), vec_ext = 1, size = ptszs$val[[1]], 
             coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
   ggtitle(paste(pcamod$depth[1], 'm')) + 
   theme_bw(base_family = 'serif')
-p4 <- ggord(pcamod$pca[[2]], axes = c("3", "4"), vec_ext = 1, size = ptszs$val[[2]], 
+p4 <- ggord(pcamod$pca[[2]], axes = c("2", "3"), vec_ext = 1, size = ptszs$val[[2]], 
             coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
   ggtitle(paste(pcamod$depth[2], 'm')) + 
   theme_bw(base_family = 'serif')
@@ -363,7 +363,7 @@ pcacoef <- pcamod %>%
       data.frame(val = ., predict(pca))
     
     # form of response model
-    resp <- paste0('log(1 + val) ~ PC1 + PC2 + PC3 + PC4')#, paste(names(tomod)[!grepl('^val$',  names(tomod))], collapse = ' + '))
+    resp <- paste0('log(1 + val) ~ PC1 + PC2 + PC3')#, paste(names(tomod)[!grepl('^val$',  names(tomod))], collapse = ' + '))
     
     # get coefficients
     cffs <- do.call('glmulti',
@@ -553,7 +553,7 @@ totab <- pcamod %>%
   ) %>% 
   arrange(depth, dt) %>% 
   mutate(depth = paste(depth, 'm')) %>% 
-  select(depth, dt, PC1, PC2, PC3, PC4)
+  select(depth, dt, PC1, PC2, PC3)
 
 cap.val <- 'Correlations of crab abundance and input variables with principal component (PC) axes. Abundance was modelled with PC axes created using the input variables.'
 
