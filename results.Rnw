@@ -342,7 +342,7 @@ p2 <- ggord(pcamod$pca[[2]], axes = c("1", "2"), vec_ext = 5, size = ptszs$val[[
             coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
   ggtitle(paste(pcamod$depth[2], 'm')) + 
   theme_bw(base_family = 'serif')
-p3 <- ggord(pcamod$pca[[1]], axes = c("1", "3"), vec_ext = 1, size = ptszs$val[[1]], 
+p3 <- ggord(pcamod$pca[[1]], axes = c("2", "3"), vec_ext = 1, size = ptszs$val[[1]], 
             coord_fix = F, cols = 'darkblue', alpha = 0.7, txt = 3) +
   ggtitle(paste(pcamod$depth[1], 'm')) + 
   theme_bw(base_family = 'serif')
