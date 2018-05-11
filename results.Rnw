@@ -26,7 +26,6 @@ library(knitr)
 opts_chunk$set(warning = F, message = F)
 
 library(tidyverse)
-library(GGally)
 library(glmulti)
 library(MuMIn)
 library(gridExtra)
@@ -102,7 +101,7 @@ toplo <- tomod %>%
   mutate(abundance = log(1 + abundance))
   
 # plot
-ggpairs(toplo)
+pairs(toplo)
 @
 
 <<eval = T, echo = F>>=
@@ -171,7 +170,7 @@ toplo1 <- toplo %>%
   group_by(res) %>% 
   arrange(depth, -Importance) %>% 
   mutate(var = factor(var, levels = unique(var)))
-p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`)) + 
+p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`, group = `Depth (m)`)) + 
   geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
   facet_wrap(~ res, ncol = 1,scales = 'free_y') +
   thm + 
@@ -418,7 +417,7 @@ thm <- theme_bw(base_family = 'serif') +
 toplo1 <- toplo %>% 
   arrange(depth, -Importance) %>% 
   mutate(var = factor(var, levels = unique(var)))
-p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`)) + 
+p1 <- ggplot(toplo1, aes(x = var, y = Importance, group = `Depth (m)`, fill = `Depth (m)`)) + 
   geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
   thm + 
   theme(legend.position = 'none') + 
