@@ -1,8 +1,13 @@
 library(R.matlab)
 library(tidyverse)
+library(readxl)
 library(tibble)
 
+# matlab matrix data
 raw <- readMat('raw/DataForNina.mat')
+
+# really small dissolution dataset
+crbdisraw <- read_excel('raw/crab_diss.xlsx')
 
 ##
 # crab data
@@ -15,6 +20,12 @@ crbs <- raw$Crabs %>%
   as.tibble %>% 
   rename_all(funs(make.names(crnm))) %>% 
   dplyr::select(CTD, abundances, pa, Average.CL)
+
+# dissolution data, seven CTD stations, true zeroes
+crbdis <- crbdisraw %>% 
+  rename(CTD = stations)
+crbs <- crbs %>% 
+  left_join(crbdis, by = 'CTD')
 
 save(crbs, file = 'data/crbs.RData', compress = 'xz')
 
