@@ -20,10 +20,8 @@ library(gridExtra)
 library(Hmisc)
 library(grid)
 library(scales)
+library(plotly)
 source('R/funcs.R')
-
-# depths to subset from env data
-depths <- c(30, 100)
 
 data(crbs)
 data(envdat)
@@ -34,34 +32,47 @@ envdat <- envdat %>%
     pCO2_ave = pCO2, 
     pCO2 = pCO2.at.this.depth.not.depth.averaged
   )
+
+# depths to subset from env data
+depths <- c(30, 100)
+
+# exp vars to use in reg mods
+kpvars <- c('pH', 'Temperature', 'Alkalinity')
+
+# exp vars to use in cor eval
+corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluorescence', 'Nitrate', 'Phosphate', 'Silicate', 'Ammonia', 'pCO2_ave', 'pCO2', 'Aragonite', 'Revelle')
 ```
 
 # {.tabset}
 
+Abundances log-transfomed, one row of data with low alkalinity removed.
 ```{r pairsplots, fig.height = 9, fig.width = 9}
-# exp vars to use
-corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluorescence', 'Nitrate', 'Phosphate', 'Silicate', 'Ammonia', 'pCO2_ave', 'pCO2', 'Aragonite', 'Revelle')
-
 # data prep, nested for mods
 tocor <- envdat %>% 
   filter(depth %in% depths) %>% 
   left_join(crbs, by = 'CTD') %>% 
   dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', corvars)) %>% 
-  filter(Alkalinity > 2000)
+  filter(Alkalinity > 2000) %>% 
+  mutate(abundances = log(1 + abundances))
   
+levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
+labs <- levs
+
 shalcor <- tocor %>% 
   filter(depth == depths[1]) %>% 
   select(-depth)
+shalcor <- shalcor[, rev(levs)]
 
 deepcor <- tocor %>% 
   filter(depth == depths[2]) %>% 
   select(-depth)
+deepcor <- deepcor[, rev(levs)]
 ```
 
 ## `r depths[1]` meters
 
 ```{r fig.height = 8, fig.width = 8}
-pairs(shalcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[1], ' m'))
+pairs(shalcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[1], ' m'), row1attop = F)
 ```
 
 ```{r, fig.height = 7, fig.width = 7}
@@ -91,8 +102,6 @@ crs <- crossing(var1 = names(shalcor), var2 = names(shalcor)) %>%
   ) %>% 
   unnest %>% 
   select(-rowname)
-levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
-labs <- levs
 prplo <- crs %>% 
   separate(pr, c('cor', 'sig'), sep = ' ') %>% 
   filter(var1 %in% levs & var2 %in% levs) %>%  
@@ -146,10 +155,9 @@ grid.draw(gt)
 
 ```
 
-
 ## `r depths[2]` meters
 ```{r fig.height = 8, fig.width = 8}
-pairs(deepcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[2], ' m'))
+pairs(deepcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[2], ' m'), row1attop = F)
 ```
 
 ```{r, fig.height = 7, fig.width = 7}
@@ -234,7 +242,6 @@ grid.draw(gt)
 
 ```
 
-
 # {.tabset}
 
 ## Models
@@ -242,9 +249,6 @@ grid.draw(gt)
 ```{r}
 ##
 # prep data for modelling
-
-# exp vars to use
-kpvars <- c('pH', 'Temperature', 'Alkalinity')
 
 # model globals
 resp <- c(
@@ -479,4 +483,94 @@ knitr::kable(cltab, caption = cap.val)
 
 ## Dissolution factor analysis
 
-Dissolution at hi/lo none, compare with env vars and other response variables
+```{r, fig.height = 12, fig.width = 3}
+
+discomp <- envdat %>% 
+  filter(depth %in% depths) %>% 
+  left_join(crbs, by = 'CTD') %>% 
+  dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', 'diss', corvars)) %>%
+  mutate(
+    abundances = log(1 + abundances),
+    diss = factor(diss, levels = c('lo', 'hi'))
+    ) %>% 
+  filter(!is.na(diss)) %>% 
+  gather('var', 'val', -depth, -diss)
+
+discompave <- discomp %>% 
+  group_by(depth, diss, var) %>% 
+  summarise(val = mean(val))
+
+# p <- ggplot(discomp, aes(x = diss, y = val)) +
+#   geom_jitter(width = 0.1, alpha = 0.6) +
+#   geom_path(data = discompave, aes(group = var)) +
+#   facet_grid(var ~ depth, scales = 'free_y', switch = 'y') +
+#   theme_bw() +
+#   theme(
+#     strip.background = element_blank(),
+#     axis.title.y = element_blank(),
+#     strip.placement = 'outside'
+#   ) + 
+#   ggtitle('Depths (m)')
+# p
+```
+
+```{r}
+# t-tests
+ttsts <- discomp %>% 
+  group_by(depth, var) %>% 
+  nest %>% 
+  mutate(ttst = map(data, function(x){
+    
+    t.test(val ~ diss, x)
+    
+  }))
+
+selectInput("var", "Choose variable:", unique(ttsts$var))
+
+# select data from t-tests
+ttstshw <- reactive({
+
+  dat <- filter(ttsts, var %in% input$var) %>% 
+    .$ttst
+  
+  return(dat)
+  
+})
+
+# select data to plot
+ttstplo <- reactive({
+  
+  dat <- filter(ttsts, var %in% input$var) %>% 
+    select(-ttst) %>% 
+    unnest
+     
+})
+
+# plot of individual variable by dissolution
+renderPlot({
+  
+  toplo <- ttstplo()
+  
+  toploave <- toplo %>% 
+    group_by(depth, diss, var) %>% 
+    summarise(val = mean(val))
+
+  ggplot(toplo, aes(x = diss, y = val)) +
+    geom_jitter(width = 0.1, alpha = 0.6, size = 4) +
+    geom_path(data = toploave, aes(group = var)) +
+    facet_grid(var ~ depth, scales = 'free_y', switch = 'y') +
+    theme_bw(base_size = 18) +
+    theme(
+      strip.background = element_blank(),
+      axis.title.y = element_blank(),
+      strip.placement = 'outside'
+    ) + 
+    ggtitle('Depths (m)')
+  
+}, height = 300, width = 600)
+
+renderPrint({cat(depths[1], "m t-test\n");ttstshw()[[1]]})
+renderPrint({cat(depths[2], "m t-test\n");ttstshw()[[2]]})
+```
+
+
