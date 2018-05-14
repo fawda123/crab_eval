@@ -21,9 +21,20 @@ crbs <- raw$Crabs %>%
   rename_all(funs(make.names(crnm))) %>% 
   dplyr::select(CTD, abundances, pa, Average.CL)
 
-# dissolution data, seven CTD stations, true zeroes
+# dissolution data, seven CTD stations, true zeroes, recode levels
 crbdis <- crbdisraw %>% 
-  rename(CTD = stations)
+  rename(CTD = stations) %>% 
+  gather('var', 'val', -CTD) %>% 
+  filter(val == 1) %>% 
+  select(-val) %>% 
+  mutate(
+    var = factor(var, levels = c('dissolution', 'no dissolution', 'partial'), labels = c('hi', 'lo', 'none')),
+    var = as.character(var)
+    ) %>% 
+  rename(diss = var) %>% 
+  arrange(CTD)
+  
+# join dissolution with other crb data
 crbs <- crbs %>% 
   left_join(crbdis, by = 'CTD')
 

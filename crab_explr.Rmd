@@ -18,8 +18,6 @@ library(glmulti)
 library(MuMIn)
 library(gridExtra)
 library(Hmisc)
-library(ggord)
-library(english)
 source('R/funcs.R')
 
 data(crbs)
