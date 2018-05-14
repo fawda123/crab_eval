@@ -11,20 +11,229 @@ runtime: shiny
 
 ```{r, message = F, warning = F}
 library(knitr)
-opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent'), eval = T)
+opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent', family = 'serif'), eval = T)
 
 library(tidyverse)
 library(glmulti)
 library(MuMIn)
 library(gridExtra)
 library(Hmisc)
+library(grid)
+library(scales)
 source('R/funcs.R')
+
+# depths to subset from env data
+depths <- c(30, 100)
 
 data(crbs)
 data(envdat)
+
+# rename some variables
+envdat <- envdat %>% 
+  rename(
+    pCO2_ave = pCO2, 
+    pCO2 = pCO2.at.this.depth.not.depth.averaged
+  )
 ```
 
-Make a correlation matrix like we did for Pteropods
+# {.tabset}
+
+```{r pairsplots, fig.height = 9, fig.width = 9}
+# exp vars to use
+corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluorescence', 'Nitrate', 'Phosphate', 'Silicate', 'Ammonia', 'pCO2_ave', 'pCO2', 'Aragonite', 'Revelle')
+
+# data prep, nested for mods
+tocor <- envdat %>% 
+  filter(depth %in% depths) %>% 
+  left_join(crbs, by = 'CTD') %>% 
+  dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', corvars)) %>% 
+  filter(Alkalinity > 2000)
+  
+shalcor <- tocor %>% 
+  filter(depth == depths[1]) %>% 
+  select(-depth)
+
+deepcor <- tocor %>% 
+  filter(depth == depths[2]) %>% 
+  select(-depth)
+```
+
+## `r depths[1]` meters
+
+```{r fig.height = 8, fig.width = 8}
+pairs(shalcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[1], ' m'))
+```
+
+```{r, fig.height = 7, fig.width = 7}
+# all correlations
+crs <- crossing(var1 = names(shalcor), var2 = names(shalcor)) %>% 
+  filter(var1 != var2) %>% 
+  rownames_to_column() %>% 
+  group_by(rowname) %>% 
+  nest %>% 
+  mutate(
+    crs = map(data, function(x){
+      
+      # variables
+      vr1 <- shalcor[[x$var1]]
+      vr2 <- shalcor[[x$var2]]
+      
+      # pearson
+      pr_ts <- cor.test(vr1, vr2, method = 'pearson')
+      pr_cr <- round(pr_ts$estimate, 2)
+      pr_pv <- p_ast(pr_ts$p.value)
+      pr <- paste(pr_cr, pr_pv)
+    
+      out <- data.frame(pr = pr, stringsAsFactors = F)
+      return(out)
+      
+    })
+  ) %>% 
+  unnest %>% 
+  select(-rowname)
+levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
+labs <- levs
+prplo <- crs %>% 
+  separate(pr, c('cor', 'sig'), sep = ' ') %>% 
+  filter(var1 %in% levs & var2 %in% levs) %>%  
+  mutate(
+    cor = as.numeric(cor), 
+    var1 = factor(var1, levels = rev(levs), labels = rev(labs)), 
+    var2 = factor(var2, levels = rev(levs), labels = rev(labs)), 
+    sig = gsub('ns', '', sig)
+  )
+
+pbase <- theme(
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 8), 
+  axis.text.y = element_text(size = 8),
+  legend.position = c(0.5, 1.1),
+  legend.direction = 'horizontal',
+  plot.margin = unit(c(6,4,0,0), "lines"),
+  strip.background = element_blank(), 
+  strip.text.y = element_text(angle = 0, hjust = 0, vjust = 0.5), 
+  panel.background = element_rect(fill = 'black')
+  ) 
+
+outlab <- data.frame(
+  y = c(1.5, 9.5), 
+  lab = c('Biological', 'Environment')
+)
+
+p <- ggplot(prplo) + 
+  geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
+  geom_text(aes(y = var1, x = var2, label = sig)) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.7)),
+                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 17, xmax = 17) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.7)),
+                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 17, xmax = 17) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.7)),
+                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 17, ymax = 17) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.7)),
+                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 17, ymax = 17) +
+  pbase +
+  scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
+  scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+  scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
+  geom_hline(yintercept = 2.5, size = 1.5) +
+  geom_vline(xintercept = 2.5, size = 1.5) 
+
+# Code to override clipping
+gt <- ggplot_gtable(ggplot_build(p))
+gt$layout$clip[gt$layout$name == "panel"] <- "off"
+grid.draw(gt)
+
+```
+
+
+## `r depths[2]` meters
+```{r fig.height = 8, fig.width = 8}
+pairs(deepcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[2], ' m'))
+```
+
+```{r, fig.height = 7, fig.width = 7}
+# all correlations
+crs <- crossing(var1 = names(deepcor), var2 = names(deepcor)) %>% 
+  filter(var1 != var2) %>% 
+  rownames_to_column() %>% 
+  group_by(rowname) %>% 
+  nest %>% 
+  mutate(
+    crs = map(data, function(x){
+      
+      # variables
+      vr1 <- deepcor[[x$var1]]
+      vr2 <- deepcor[[x$var2]]
+      
+      # pearson
+      pr_ts <- cor.test(vr1, vr2, method = 'pearson')
+      pr_cr <- round(pr_ts$estimate, 2)
+      pr_pv <- p_ast(pr_ts$p.value)
+      pr <- paste(pr_cr, pr_pv)
+    
+      out <- data.frame(pr = pr, stringsAsFactors = F)
+      return(out)
+      
+    })
+  ) %>% 
+  unnest %>% 
+  select(-rowname)
+levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
+labs <- levs
+prplo <- crs %>% 
+  separate(pr, c('cor', 'sig'), sep = ' ') %>% 
+  filter(var1 %in% levs & var2 %in% levs) %>%  
+  mutate(
+    cor = as.numeric(cor), 
+    var1 = factor(var1, levels = rev(levs), labels = rev(labs)), 
+    var2 = factor(var2, levels = rev(levs), labels = rev(labs)), 
+    sig = gsub('ns', '', sig)
+  )
+
+pbase <- theme(
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 8), 
+  axis.text.y = element_text(size = 8),
+  legend.position = c(0.5, 1.1),
+  legend.direction = 'horizontal',
+  plot.margin = unit(c(6,4,0,0), "lines"),
+  strip.background = element_blank(), 
+  strip.text.y = element_text(angle = 0, hjust = 0, vjust = 0.5), 
+  panel.background = element_rect(fill = 'black')
+  ) 
+
+outlab <- data.frame(
+  y = c(1.5, 9.5), 
+  lab = c('Biological', 'Environment')
+)
+
+p <- ggplot(prplo) + 
+  geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
+  geom_text(aes(y = var1, x = var2, label = sig)) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.7)),
+                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 17, xmax = 17) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.7)),
+                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 17, xmax = 17) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.7)),
+                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 17, ymax = 17) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.7)),
+                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 17, ymax = 17) +
+  pbase +
+  scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
+  scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+  scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
+  geom_hline(yintercept = 2.5, size = 1.5) +
+  geom_vline(xintercept = 2.5, size = 1.5) 
+
+# Code to override clipping
+gt <- ggplot_gtable(ggplot_build(p))
+gt$layout$clip[gt$layout$name == "panel"] <- "off"
+grid.draw(gt)
+
+```
+
 
 # {.tabset}
 
@@ -58,8 +267,9 @@ fams <- list(
 
 # data prep, nested for mods
 tomod <- envdat %>% 
-  filter(depth %in% c(30, 100)) %>% 
+  filter(depth %in% depths) %>% 
   left_join(crbs, by = 'CTD') %>% 
+  select(-diss) %>% 
   gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>% 
   group_by(var) %>% 
   mutate(
