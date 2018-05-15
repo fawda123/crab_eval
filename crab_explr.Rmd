@@ -37,7 +37,7 @@ envdat <- envdat %>%
 depths <- c(30, 100)
 
 # exp vars to use in reg mods
-kpvars <- c('pH', 'Temperature', 'Alkalinity')
+kpvars <- c('pH', 'Temperature', 'Aragonite')
 
 # exp vars to use in cor eval
 corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluorescence', 'Nitrate', 'Phosphate', 'Silicate', 'Ammonia', 'pCO2_ave', 'pCO2', 'Aragonite', 'Revelle')
@@ -283,7 +283,7 @@ tomod <- envdat %>%
   dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>% 
   gather('res', 'val', abundances, pa, Average.CL) %>% 
   dplyr::select(depth, res, val, everything()) %>% 
-  filter(Alkalinity > -2) %>%
+  # filter(Alkalinity > -2) %>%
   group_by(depth, res) %>% 
   nest %>% 
   left_join(fams, by = 'res') %>% 
@@ -415,7 +415,8 @@ totab <- mods %>%
   select(-cffs) %>% 
   mutate(
     tops = map(tops, function(x){
-
+      
+      # format top models long
       x <- x %>%
         mutate(model = 1:nrow(.)) %>% 
         gather('var', 'val', -model) %>% 
@@ -491,10 +492,11 @@ discomp <- envdat %>%
   dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', 'diss', corvars)) %>%
   mutate(
     abundances = log(1 + abundances),
-    diss = factor(diss, levels = c('lo', 'hi'))
+    diss = factor(diss, levels = c('none', 'lo', 'hi'))
     ) %>% 
   filter(!is.na(diss)) %>% 
-  gather('var', 'val', -depth, -diss)
+  gather('var', 'val', -depth, -diss) %>% 
+  filter(!is.na(val))
 
 discompave <- discomp %>% 
   group_by(depth, diss, var) %>% 
@@ -521,7 +523,10 @@ ttsts <- discomp %>%
   nest %>% 
   mutate(ttst = map(data, function(x){
     
-    t.test(val ~ diss, x)
+    if(length(unique(x$diss)) == 2)
+      t.test(val ~ diss, x)
+    else 
+      lm(val ~ diss, x)
     
   }))
 
@@ -532,6 +537,9 @@ ttstshw <- reactive({
 
   dat <- filter(ttsts, var %in% input$var) %>% 
     .$ttst
+  
+  if(inherits(dat[[2]], 'lm'))
+    dat[[2]] <- summary(dat[[2]])
   
   return(dat)
   
@@ -569,8 +577,8 @@ renderPlot({
   
 }, height = 300, width = 600)
 
-renderPrint({cat(depths[1], "m t-test\n");ttstshw()[[1]]})
-renderPrint({cat(depths[2], "m t-test\n");ttstshw()[[2]]})
+renderPrint({cat(depths[1], "m test\n");ttstshw()[[1]]})
+renderPrint({cat(depths[2], "m test\n");ttstshw()[[2]]})
 ```
 
 
