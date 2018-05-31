@@ -36,7 +36,8 @@ crbdis <- crbdisraw %>%
   
 # join dissolution with other crb data
 crbs <- crbs %>% 
-  left_join(crbdis, by = 'CTD')
+  full_join(crbdis, by = 'CTD') %>% 
+  arrange(CTD)
 
 save(crbs, file = 'data/crbs.RData', compress = 'xz')
 
@@ -57,9 +58,21 @@ envdat <- raw$Data %>%
   enframe('depth') %>% 
   mutate(
     depth = 10 * depth, 
-    value = map(value, ~ data.frame(CTD = crbs$CTD, .))
+    value = map(value, ~ data.frame(CTD = raw$Crabs[,1], .))
   ) %>% 
   unnest %>% 
   rename_all(funs(c(vrnm)))
 
+# manually add data from Nina
+mandat <- tibble(
+  CTD = c(109, 128),
+  Temperature = c(7.59, 10.34),
+  Aragonite = c(0.89, 1.73), 
+  depth = c(100, 100)
+)
+
+# use rbind.fill to combine
+envdat <- plyr::rbind.fill(envdat, mandat) %>%
+  arrange(depth, CTD)
+  
 save(envdat, file = 'data/envdat.RData', compress = 'xz')
