@@ -21,6 +21,8 @@ library(Hmisc)
 library(grid)
 library(scales)
 library(plotly)
+library(kableExtra)
+
 source('R/funcs.R')
 
 data(crbs)
@@ -33,9 +35,6 @@ envdat <- envdat %>%
     pCO2 = pCO2.at.this.depth.not.depth.averaged
   )
 
-# depths to subset from env data
-depths <- c(30, 100)
-
 # exp vars to use in reg mods
 kpvars <- c('pH', 'Temperature', 'Aragonite')
 
@@ -45,200 +44,265 @@ corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluoresce
 
 # {.tabset}
 
-Abundances log-transformed, one row of data with low alkalinity removed.
+```{r}
+selectInput(inputId = 'dep1', label = 'Select first depth:', choices = seq(10, 200, by = 10), selected = 30)
+
+selectInput(inputId = 'dep2', label = 'Select second depth:', choices = seq(10, 200, by = 10), selected = 100)
+```
+
 ```{r pairsplots, fig.height = 9, fig.width = 9}
 # data prep, nested for mods
-tocor <- envdat %>% 
-  filter(depth %in% depths) %>% 
-  left_join(crbs, by = 'CTD') %>% 
-  dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', corvars)) %>% 
-  filter(Alkalinity > 2000) %>% 
-  mutate(abundances = log(1 + abundances))
+tocor <- reactive({
+  
+  # input
+  dep1 <- as.numeric(input$dep1)
+  dep2 <- as.numeric(input$dep2)
+  
+  out <- envdat %>% 
+    filter(depth %in% c(dep1, dep2)) %>% 
+    left_join(crbs, by = 'CTD') %>% 
+    dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', corvars)) %>% 
+    filter(Alkalinity > 2000) %>% 
+    mutate(abundances = log(1 + abundances))
+  
+  return(out)
+  
+})
   
 levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
 labs <- levs
 
-shalcor <- tocor %>% 
-  filter(depth == depths[1]) %>% 
-  select(-depth)
-shalcor <- shalcor[, rev(levs)]
+dep1cor <- reactive({
+  
+  # input
+  dep1 <- as.numeric(input$dep1)
+  
+  dep1cor <- tocor() %>% 
+    filter(depth == dep1) %>% 
+    select(-depth)
+  
+  dep1cor <- dep1cor[, rev(levs)]
+  
+  return(dep1cor)
+  
+})
 
-deepcor <- tocor %>% 
-  filter(depth == depths[2]) %>% 
-  select(-depth)
-deepcor <- deepcor[, rev(levs)]
+dep2cor <- reactive({
+
+  # input
+  dep2 <- as.numeric(input$dep2)
+
+  dep2cor <- tocor() %>%
+    filter(depth == dep2) %>%
+    select(-depth)
+
+  dep2cor <- dep2cor[, rev(levs)]
+
+  return(dep2cor)
+
+})
+
 ```
 
-## `r depths[1]` meters
+## First selected depth
 
 ```{r fig.height = 8, fig.width = 8}
-pairs(shalcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[1], ' m'), row1attop = F)
+renderPlot({
+
+  # inputs
+  dep1 <- as.numeric(input$dep1)
+
+  pairs(dep1cor(), gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', dep1, ' m'), row1attop = F)
+
+}, width = 700, height = 700)
 ```
 
 ```{r, fig.height = 7, fig.width = 7}
 # all correlations
-crs <- crossing(var1 = names(shalcor), var2 = names(shalcor)) %>% 
-  filter(var1 != var2) %>% 
-  rownames_to_column() %>% 
-  group_by(rowname) %>% 
-  nest %>% 
-  mutate(
-    crs = map(data, function(x){
-      
-      # variables
-      vr1 <- shalcor[[x$var1]]
-      vr2 <- shalcor[[x$var2]]
-      
-      # pearson
-      pr_ts <- cor.test(vr1, vr2, method = 'pearson')
-      pr_cr <- round(pr_ts$estimate, 2)
-      pr_pv <- p_ast(pr_ts$p.value)
-      pr <- paste(pr_cr, pr_pv)
-    
-      out <- data.frame(pr = pr, stringsAsFactors = F)
-      return(out)
-      
-    })
-  ) %>% 
-  unnest %>% 
-  select(-rowname)
-prplo <- crs %>% 
-  separate(pr, c('cor', 'sig'), sep = ' ') %>% 
-  filter(var1 %in% levs & var2 %in% levs) %>%  
-  mutate(
-    cor = as.numeric(cor), 
-    var1 = factor(var1, levels = rev(levs), labels = rev(labs)), 
-    var2 = factor(var2, levels = rev(levs), labels = rev(labs)), 
-    sig = gsub('ns', '', sig)
+renderPlot({
+
+  # input
+  dep1cor <- dep1cor()
+
+  crs <- crossing(var1 = names(dep1cor), var2 = names(dep1cor)) %>%
+    filter(var1 != var2) %>%
+    rownames_to_column() %>%
+    group_by(rowname) %>%
+    nest %>%
+    mutate(
+      crs = map(data, function(x){
+
+        # variables
+        vr1 <- dep1cor[[x$var1]]
+        vr2 <- dep1cor[[x$var2]]
+
+        # pearson
+        pr_ts <- cor.test(vr1, vr2, method = 'pearson')
+        pr_cr <- round(pr_ts$estimate, 2)
+        pr_pv <- p_ast(pr_ts$p.value)
+        pr <- paste(pr_cr, pr_pv)
+
+        out <- data.frame(pr = pr, stringsAsFactors = F)
+        return(out)
+
+      })
+    ) %>%
+    unnest %>%
+    select(-rowname)
+  prplo <- crs %>%
+    separate(pr, c('cor', 'sig'), sep = ' ') %>%
+    filter(var1 %in% levs & var2 %in% levs) %>%
+    mutate(
+      cor = as.numeric(cor),
+      var1 = factor(var1, levels = rev(levs), labels = rev(labs)),
+      var2 = factor(var2, levels = rev(levs), labels = rev(labs)),
+      sig = gsub('ns', '', sig)
+    )
+
+  pbase <- theme(
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 8),
+      axis.text.y = element_text(size = 8),
+      legend.position = c(0.5, 1.1),
+      legend.direction = 'horizontal',
+      plot.margin = unit(c(6,4,0,0), "lines"),
+      strip.background = element_blank(),
+      strip.text.y = element_text(angle = 0, hjust = 0, vjust = 0.5),
+      panel.background = element_rect(fill = 'black')
+    )
+
+  outlab <- data.frame(
+    y = c(1.5, 9.5),
+    lab = c('Biological', 'Environment')
   )
 
-pbase <- theme(
-  panel.grid.major = element_blank(), 
-  panel.grid.minor = element_blank(), 
-  axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 8), 
-  axis.text.y = element_text(size = 8),
-  legend.position = c(0.5, 1.1),
-  legend.direction = 'horizontal',
-  plot.margin = unit(c(6,4,0,0), "lines"),
-  strip.background = element_blank(), 
-  strip.text.y = element_text(angle = 0, hjust = 0, vjust = 0.5), 
-  panel.background = element_rect(fill = 'black')
-  ) 
+  p <- ggplot(prplo) +
+    geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') +
+    geom_text(aes(y = var1, x = var2, label = sig)) +
+    annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.7)),
+                      ymin = outlab$y[1], ymax = outlab$y[1], xmin = 17, xmax = 17) +
+    annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.7)),
+                      ymin = outlab$y[2], ymax = outlab$y[2], xmin = 17, xmax = 17) +
+    annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.7)),
+                      xmin = outlab$y[1], xmax = outlab$y[1], ymin = 17, ymax = 17) +
+    annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.7)),
+                      xmin = outlab$y[2], xmax = outlab$y[2], ymin = 17, ymax = 17) +
+    pbase +
+    scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+    scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+    scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
+    geom_hline(yintercept = 2.5, size = 1.5) +
+    geom_vline(xintercept = 2.5, size = 1.5)
 
-outlab <- data.frame(
-  y = c(1.5, 9.5), 
-  lab = c('Biological', 'Environment')
-)
+  # Code to override clipping
+  gt <- ggplot_gtable(ggplot_build(p))
+  gt$layout$clip[gt$layout$name == "panel"] <- "off"
+  grid.draw(gt)
 
-p <- ggplot(prplo) + 
-  geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
-  geom_text(aes(y = var1, x = var2, label = sig)) +
-  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.7)),
-                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 17, xmax = 17) +
-  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.7)),
-                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 17, xmax = 17) +
-  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.7)),
-                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 17, ymax = 17) +
-  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.7)),
-                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 17, ymax = 17) +
-  pbase +
-  scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
-  scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
-  scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
-  geom_hline(yintercept = 2.5, size = 1.5) +
-  geom_vline(xintercept = 2.5, size = 1.5) 
-
-# Code to override clipping
-gt <- ggplot_gtable(ggplot_build(p))
-gt$layout$clip[gt$layout$name == "panel"] <- "off"
-grid.draw(gt)
+}, width = 700, height = 700)
 
 ```
 
-## `r depths[2]` meters
+## Second selected depth
+
 ```{r fig.height = 8, fig.width = 8}
-pairs(deepcor, gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', depths[2], ' m'), row1attop = F)
+renderPlot({
+
+  # inputs
+  dep2 <- as.numeric(input$dep2)
+
+  pairs(dep2cor(), gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', dep2, ' m'), row1attop = F)
+
+}, width = 800, height = 800)
 ```
 
 ```{r, fig.height = 7, fig.width = 7}
 # all correlations
-crs <- crossing(var1 = names(deepcor), var2 = names(deepcor)) %>% 
-  filter(var1 != var2) %>% 
-  rownames_to_column() %>% 
-  group_by(rowname) %>% 
-  nest %>% 
-  mutate(
-    crs = map(data, function(x){
-      
-      # variables
-      vr1 <- deepcor[[x$var1]]
-      vr2 <- deepcor[[x$var2]]
-      
-      # pearson
-      pr_ts <- cor.test(vr1, vr2, method = 'pearson')
-      pr_cr <- round(pr_ts$estimate, 2)
-      pr_pv <- p_ast(pr_ts$p.value)
-      pr <- paste(pr_cr, pr_pv)
-    
-      out <- data.frame(pr = pr, stringsAsFactors = F)
-      return(out)
-      
-    })
-  ) %>% 
-  unnest %>% 
-  select(-rowname)
-levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
-labs <- levs
-prplo <- crs %>% 
-  separate(pr, c('cor', 'sig'), sep = ' ') %>% 
-  filter(var1 %in% levs & var2 %in% levs) %>%  
-  mutate(
-    cor = as.numeric(cor), 
-    var1 = factor(var1, levels = rev(levs), labels = rev(labs)), 
-    var2 = factor(var2, levels = rev(levs), labels = rev(labs)), 
-    sig = gsub('ns', '', sig)
+renderPlot({
+
+  # input
+  dep2cor <- dep2cor()
+
+  crs <- crossing(var1 = names(dep2cor), var2 = names(dep2cor)) %>%
+    filter(var1 != var2) %>%
+    rownames_to_column() %>%
+    group_by(rowname) %>%
+    nest %>%
+    mutate(
+      crs = map(data, function(x){
+
+        # variables
+        vr1 <- dep2cor[[x$var1]]
+        vr2 <- dep2cor[[x$var2]]
+
+        # pearson
+        pr_ts <- cor.test(vr1, vr2, method = 'pearson')
+        pr_cr <- round(pr_ts$estimate, 2)
+        pr_pv <- p_ast(pr_ts$p.value)
+        pr <- paste(pr_cr, pr_pv)
+
+        out <- data.frame(pr = pr, stringsAsFactors = F)
+        return(out)
+
+      })
+    ) %>%
+    unnest %>%
+    select(-rowname)
+  levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
+  labs <- levs
+  prplo <- crs %>%
+    separate(pr, c('cor', 'sig'), sep = ' ') %>%
+    filter(var1 %in% levs & var2 %in% levs) %>%
+    mutate(
+      cor = as.numeric(cor),
+      var1 = factor(var1, levels = rev(levs), labels = rev(labs)),
+      var2 = factor(var2, levels = rev(levs), labels = rev(labs)),
+      sig = gsub('ns', '', sig)
+    )
+
+  pbase <- theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.position = c(0.5, 1.1),
+    legend.direction = 'horizontal',
+    plot.margin = unit(c(6,4,0,0), "lines"),
+    strip.background = element_blank(),
+    strip.text.y = element_text(angle = 0, hjust = 0, vjust = 0.5),
+    panel.background = element_rect(fill = 'black')
+    )
+
+  outlab <- data.frame(
+    y = c(1.5, 9.5),
+    lab = c('Biological', 'Environment')
   )
 
-pbase <- theme(
-  panel.grid.major = element_blank(), 
-  panel.grid.minor = element_blank(), 
-  axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 8), 
-  axis.text.y = element_text(size = 8),
-  legend.position = c(0.5, 1.1),
-  legend.direction = 'horizontal',
-  plot.margin = unit(c(6,4,0,0), "lines"),
-  strip.background = element_blank(), 
-  strip.text.y = element_text(angle = 0, hjust = 0, vjust = 0.5), 
-  panel.background = element_rect(fill = 'black')
-  ) 
+  p <- ggplot(prplo) +
+    geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') +
+    geom_text(aes(y = var1, x = var2, label = sig)) +
+    annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.7)),
+                      ymin = outlab$y[1], ymax = outlab$y[1], xmin = 17, xmax = 17) +
+    annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.7)),
+                      ymin = outlab$y[2], ymax = outlab$y[2], xmin = 17, xmax = 17) +
+    annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.7)),
+                      xmin = outlab$y[1], xmax = outlab$y[1], ymin = 17, ymax = 17) +
+    annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.7)),
+                      xmin = outlab$y[2], xmax = outlab$y[2], ymin = 17, ymax = 17) +
+    pbase +
+    scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+    scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+    scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
+    geom_hline(yintercept = 2.5, size = 1.5) +
+    geom_vline(xintercept = 2.5, size = 1.5)
 
-outlab <- data.frame(
-  y = c(1.5, 9.5), 
-  lab = c('Biological', 'Environment')
-)
+  # Code to override clipping
+  gt <- ggplot_gtable(ggplot_build(p))
+  gt$layout$clip[gt$layout$name == "panel"] <- "off"
+  grid.draw(gt)
 
-p <- ggplot(prplo) + 
-  geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
-  geom_text(aes(y = var1, x = var2, label = sig)) +
-  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.7)),
-                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 17, xmax = 17) +
-  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.7)),
-                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 17, xmax = 17) +
-  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.7)),
-                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 17, ymax = 17) +
-  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.7)),
-                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 17, ymax = 17) +
-  pbase +
-  scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
-  scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
-  scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
-  geom_hline(yintercept = 2.5, size = 1.5) +
-  geom_vline(xintercept = 2.5, size = 1.5) 
-
-# Code to override clipping
-gt <- ggplot_gtable(ggplot_build(p))
-gt$layout$clip[gt$layout$name == "panel"] <- "off"
-grid.draw(gt)
+}, width = 700, height = 700)
 
 ```
 
@@ -252,209 +316,237 @@ grid.draw(gt)
 
 # model globals
 resp <- c(
-    abundances = 'log(1+val)', 
-    pa = 'val', 
+    abundances = 'log(1+val)',
+    pa = 'val',
     Average.CL = 'val'
-  ) %>% 
-  enframe('res', 'resp') %>% 
-  group_by(res) %>% 
-  nest(.key = 'resp') %>% 
+  ) %>%
+  enframe('res', 'resp') %>%
+  group_by(res) %>%
+  nest(.key = 'resp') %>%
   mutate(
     resp = map(resp, ~ paste(.x, paste(kpvars, collapse = '+'), sep = '~'))
     )
 fams <- list(
-    abundances = 'gaussian', 
-    pa = 'binomial', 
+    abundances = 'gaussian',
+    pa = 'binomial',
     Average.CL = 'gaussian'
-  ) %>% 
+  ) %>%
   enframe('res', 'dist')
 
 # data prep, nested for mods
-tomod <- envdat %>% 
-  filter(depth %in% depths) %>% 
-  left_join(crbs, by = 'CTD') %>% 
-  select(-diss) %>% 
-  gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>% 
-  group_by(var) %>% 
-  mutate(
-    val = scale(val)
-  ) %>% 
-  spread(var, val) %>% 
-  dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>% 
-  gather('res', 'val', abundances, pa, Average.CL) %>% 
-  dplyr::select(depth, res, val, everything()) %>% 
-  # filter(Alkalinity > -2) %>%
-  group_by(depth, res) %>% 
-  nest %>% 
-  left_join(fams, by = 'res') %>% 
-  left_join(resp, by = 'res')
+tomod <- reactive({
+
+  # input
+  dep1 <- as.numeric(input$dep1)
+  dep2 <- as.numeric(input$dep2)
+
+  envdat %>%
+    filter(depth %in% c(dep1, dep2)) %>%
+    left_join(crbs, by = 'CTD') %>%
+    select(-diss) %>%
+    gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>%
+    group_by(var) %>%
+    mutate(
+      val = scale(val)
+    ) %>%
+    spread(var, val) %>%
+    dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>%
+    gather('res', 'val', abundances, pa, Average.CL) %>%
+    dplyr::select(depth, res, val, everything()) %>%
+    # filter(Alkalinity > -2) %>%
+    group_by(depth, res) %>%
+    nest %>%
+    left_join(fams, by = 'res') %>%
+    left_join(resp, by = 'res')
+
+})
 ```
 
 ```{r}
-## 
+##
 # model selection
 
-tops <- vector('list', length = nrow(tomod))
-cffs <- vector('list', length = nrow(tomod))
+mods <- reactive({
 
-for(i in 1:nrow(tomod)){
-  
-  x <- tomod[i, ] %>% 
-    .[['data']] %>% 
-    .[[1]] %>% 
-    filter(!is.na(val))
- 
-  resp <- tomod[i, ] %>% 
-    pull(resp) %>% 
-    .[[1]]
-  
-  dist <- tomod[i, ] %>% 
-    pull(dist) %>% 
-    .[[1]]
-  
-  cffsmlt <- do.call('glmulti',
-                  list(formula(resp), data = x, level = 1, method = 'h', crit = 'aicc', plotty = F, report = F, fitfunction = 'glm', family = dist)) %>%            
-    coef %>%
-    data.frame %>%
-    rownames_to_column('var')
+  # input
+  tomod <- tomod()
 
-  # global glm
-  globs <- paste0('glm(', resp, ', data = x, na.action = na.pass, family = "', dist, '")') %>% 
-    parse(text = .) %>% 
-    eval
-  
-  # dredge, get sum stats manually
-  drdg <- dredge(globs) 
-  drdgsub <- get.models(drdg, subset = 1:5) %>% 
-    map(., function(x){
+  tops <- vector('list', length = nrow(tomod))
+  cffs <- vector('list', length = nrow(tomod))
 
-      # get mod prm, pval
-      out <- x %>% summary %>% coef %>% data.frame %>% rownames_to_column('var') %>% 
-        .[, c(1, 2, 5)]
-      names(out)[3] <- 'pval'
-      out <- out %>% 
-        mutate(
-          Estimate = round(Estimate, 2),
-          pval = p_ast(pval)
-          ) %>% 
-        unite('Estimate', Estimate, pval, sep = '') %>% 
-        spread(var, Estimate)
-      
-      # get sum stats
-      llk <- logLik(x)
-      out <- out %>%
-         mutate(
-          df = attr(llk, 'df'),
-          loglik = llk[1],
-          aicc = aicc(x)
-        )
-       
-      return(out)
-    }) %>% 
-    enframe %>% 
-    unnest %>% 
+  for(i in 1:nrow(tomod)){
+
+    x <- tomod[i, ] %>%
+      .[['data']] %>%
+      .[[1]] %>%
+      filter(!is.na(val))
+
+    resp <- tomod[i, ] %>%
+      pull(resp) %>%
+      .[[1]]
+
+    dist <- tomod[i, ] %>%
+      pull(dist) %>%
+      .[[1]]
+
+    cffsmlt <- do.call('glmulti',
+                    list(formula(resp), data = x, level = 1, method = 'h', crit = 'aicc', plotty = F, report = F, fitfunction = 'glm', family = dist)) %>%
+      coef %>%
+      data.frame %>%
+      rownames_to_column('var')
+
+    # global glm
+    globs <- paste0('glm(', resp, ', data = x, na.action = na.pass, family = "', dist, '")') %>%
+      parse(text = .) %>%
+      eval
+
+    # dredge, get sum stats manually
+    drdg <- dredge(globs)
+    drdgsub <- get.models(drdg, subset = 1:5) %>%
+      map(., function(x){
+
+        # get mod prm, pval
+        out <- x %>% summary %>% coef %>% data.frame %>% rownames_to_column('var') %>%
+          .[, c(1, 2, 5)]
+        names(out)[3] <- 'pval'
+        out <- out %>%
+          mutate(
+            Estimate = round(Estimate, 2),
+            pval = p_ast(pval)
+            ) %>%
+          unite('Estimate', Estimate, pval, sep = '') %>%
+          spread(var, Estimate)
+
+        # get sum stats
+        llk <- logLik(x)
+        out <- out %>%
+           mutate(
+            df = attr(llk, 'df'),
+            loglik = llk[1],
+            aicc = aicc(x)
+          )
+
+        return(out)
+      }) %>%
+      enframe %>%
+      unnest %>%
+      mutate(
+        model = 1:n(),
+        delta = aicc - aicc[1]
+        ) %>%
+      select(model, df, loglik, aicc, delta, everything()) %>%
+      select(-name) %>%
+      gather('var', 'val', -model, -df, -loglik, -aicc, -delta) %>%
+      spread(var, val, fill = '-') %>%
+      mutate(
+        aicc = round(aicc, 2),
+        loglik = round(loglik, 2),
+        delta = round(delta, 2)
+      )
+
+    tops[[i]] <- drdgsub
+    cffs[[i]] <- cffsmlt
+
+  }
+
+  # models
+  mods <- tomod %>%
+    select(depth, res) %>%
     mutate(
-      model = 1:n(),
-      delta = aicc - aicc[1]
-      ) %>% 
-    select(model, df, loglik, aicc, delta, everything()) %>% 
-    select(-name) %>% 
-    gather('var', 'val', -model, -df, -loglik, -aicc, -delta) %>% 
-    spread(var, val, fill = '-') %>% 
-    mutate(
-      aicc = round(aicc, 2),
-      loglik = round(loglik, 2),
-      delta = round(delta, 2)
+      tops = tops,
+      cffs = cffs
     )
 
-  tops[[i]] <- drdgsub
-  cffs[[i]] <- cffsmlt
-   
-}
+  return(mods)
 
-# models
-mods <- tomod %>% 
-  select(depth, res) %>% 
-  mutate(
-    tops = tops,
-    cffs = cffs
-  )
+})
+
 ```
 
-```{r fig.height = 8, fig.width = 8, fig.cap = 'Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep water. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each variable independent of all other variables.'}
-# toplot
-toplo <- mods %>% 
-  select(-tops) %>% 
-  unnest %>% 
-  filter(!var %in% '(Intercept)') %>% 
-  mutate(
-    `Depth (m)` = factor(depth),
-    res = factor(res, 
-                 levels = c('abundances', 'pa', 'Average.CL'),
-                 labels = c('Abundance', 'Pres./Abs.', 'Ave. carapace length'))
+```{r fig.height = 8, fig.width = 8}
+
+renderPlot({
+
+  # input
+  mods <- mods()
+
+  # toplot
+  toplo <- mods %>%
+    select(-tops) %>%
+    unnest %>%
+    filter(!var %in% '(Intercept)') %>%
+    mutate(
+      `Depth (m)` = factor(depth),
+      res = factor(res,
+                   levels = c('abundances', 'pa', 'Average.CL'),
+                   labels = c('Abundance', 'Pres./Abs.', 'Ave. carapace length'))
+      )
+  names(toplo) <- gsub('\\.*', '', names(toplo))
+
+  thm <- theme_bw(base_family = 'serif', base_size = 14) +
+    theme(
+      strip.background = element_blank(),
+      legend.position = 'top',
+      axis.title.x = element_blank(),
+      axis.title.y = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.text.x = element_text(angle = 45, hjust = 1)
     )
-names(toplo) <- gsub('\\.*', '', names(toplo))
 
-thm <- theme_bw(base_family = 'serif') + 
-  theme(
-    strip.background = element_blank(), 
-    legend.position = 'top', 
-    axis.title.x = element_blank(), 
-    axis.title.y = element_blank(),
-    panel.grid.major = element_blank(), 
-    panel.grid.minor = element_blank(),
-    axis.text.x = element_text(angle = 45, hjust = 1)
+  # importance
+  toplo1 <- toplo %>%
+    group_by(res) %>%
+    arrange(depth, -Importance) %>%
+    mutate(var = factor(var, levels = unique(var)))
+  p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`, group = `Depth (m)`)) +
+    geom_bar(stat = 'identity', position = 'dodge', colour = 'black') +
+    facet_wrap(~ res, ncol = 1,scales = 'free_y') +
+    thm +
+    theme(legend.position = 'none') +
+    ggtitle('Variable\nimportance') +
+    scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+
+  # estimates
+  toplo2 <- toplo %>%
+    group_by(res) %>%
+    arrange(depth, -Estimate) %>%
+    mutate(var = factor(var, levels = unique(var)))
+  p2 <- ggplot(toplo2, aes(x = var, y = Estimate, group = `Depth (m)`, fill = `Depth (m)`)) +
+    geom_bar(stat = 'identity', position = 'dodge', colour = 'black') +
+    geom_hline(yintercept = 0) +
+    # geom_errorbar(aes(ymin = Estimate - Xalpha005, ymax = Estimate + Xalpha005, group = `Depth (m)`), position = 'dodge') +
+    facet_wrap(~ res, scales = 'free_y', ncol = 1) +
+    thm +
+    ggtitle('Pooled parameter\nestimates') +
+    scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+  pleg <- g_legend(p2)
+  p2 <- p2 + theme(legend.position = 'none')
+
+  # unconditional variance
+  toplo3 <- toplo %>%
+    group_by(res) %>%
+    arrange(depth, -Uncondvariance) %>%
+    mutate(var = factor(var, levels = unique(var)))
+  p3 <- ggplot(toplo3, aes(x = var, y = Uncondvariance, group = `Depth (m)`, fill = `Depth (m)`)) +
+    geom_bar(stat = 'identity', position = 'dodge', colour = 'black') +
+    facet_wrap(~ res, scales = 'free_y', ncol = 1) +
+    thm +
+    ggtitle('Unconditional explained\nvariance (%)') +
+    scale_fill_manual(values = c('lightgrey', 'darkgrey'))
+  pleg <- g_legend(p3)
+  p3 <- p3 + theme(legend.position = 'none')
+
+  grid.arrange(
+    pleg,
+    arrangeGrob(p1, p3, p2, ncol = 3),
+    ncol = 1, heights = c(0.1, 1)
   )
 
-# importance
-toplo1 <- toplo %>% 
-  group_by(res) %>% 
-  arrange(depth, -Importance) %>% 
-  mutate(var = factor(var, levels = unique(var)))
-p1 <- ggplot(toplo1, aes(x = var, y = Importance, fill = `Depth (m)`, group = `Depth (m)`)) + 
-  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
-  facet_wrap(~ res, ncol = 1,scales = 'free_y') +
-  thm + 
-  theme(legend.position = 'none') + 
-  ggtitle('Variable\nimportance') + 
-  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
-
-# estimates
-toplo2 <- toplo %>% 
-  group_by(res) %>% 
-  arrange(depth, -Estimate) %>% 
-  mutate(var = factor(var, levels = unique(var)))
-p2 <- ggplot(toplo2, aes(x = var, y = Estimate, group = `Depth (m)`, fill = `Depth (m)`)) + 
-  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
-  geom_hline(yintercept = 0) + 
-  # geom_errorbar(aes(ymin = Estimate - Xalpha005, ymax = Estimate + Xalpha005, group = `Depth (m)`), position = 'dodge') +
-  facet_wrap(~ res, scales = 'free_y', ncol = 1) +
-  thm + 
-  ggtitle('Pooled parameter\nestimates') + 
-  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
-pleg <- g_legend(p2)
-p2 <- p2 + theme(legend.position = 'none')
-
-# unconditional variance
-toplo3 <- toplo %>% 
-  group_by(res) %>% 
-  arrange(depth, -Uncondvariance) %>% 
-  mutate(var = factor(var, levels = unique(var)))
-p3 <- ggplot(toplo3, aes(x = var, y = Uncondvariance, group = `Depth (m)`, fill = `Depth (m)`)) + 
-  geom_bar(stat = 'identity', position = 'dodge', colour = 'black') + 
-  facet_wrap(~ res, scales = 'free_y', ncol = 1) +
-  thm + 
-  ggtitle('Unconditional explained\nvariance (%)') + 
-  scale_fill_manual(values = c('lightgrey', 'darkgrey'))
-pleg <- g_legend(p3)
-p3 <- p3 + theme(legend.position = 'none')
-
-grid.arrange(
-  pleg, 
-  arrangeGrob(p1, p3, p2, ncol = 3), 
-  ncol = 1, heights = c(0.1, 1)
-)
+}, width = 700, height = 700)
 ```
+
+Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep water. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (%) is the effect of each variable independent of all other variables.
 
 ### Top models in tabular {.tabset}
 
@@ -463,54 +555,82 @@ grid.arrange(
 # tables of top mods
 
 # tabular
-totab <- mods %>% 
-  select(-cffs) 
+totab <- reactive({
+
+  mods() %>%
+    select(-cffs)
+
+})
 ```
 
 #### Abundance
 
-```{r}
+```{r, results = 'asis'}
 # abundance table
-abutab <- totab %>% 
-  filter(res %in% 'abundances') %>% 
-  select(-res) %>% 
-  unnest %>% 
-  mutate(depth = paste(depth, 'm'))
+renderUI({
 
-cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
-cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+  # input
+  totab <- totab()
 
-knitr::kable(abutab, caption = cap.val)
+  abutab <- totab %>%
+    filter(res %in% 'abundances') %>%
+    select(-res) %>%
+    unnest %>%
+    mutate(depth = paste(depth, 'm'))
+
+  cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+  cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+  HTML(knitr::kable(abutab, caption = cap.val, results = 'html') %>% 
+    kable_styling(full_width = T, font_size = 14))
+
+})
 ```
 
 #### Presence/absence
 
-```{r}
+```{r, results = 'asis'}
 # pa table
-patab <- totab %>% 
-  filter(res %in% 'pa') %>% 
-  select(-res) %>% 
-  unnest
+renderUI({
 
-cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
-cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+  # input
+  totab <- totab()
 
-knitr::kable(patab, caption = cap.val)
+  patab <- totab %>%
+    filter(res %in% 'pa') %>%
+    select(-res) %>%
+    unnest
+
+  cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+  cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+  HTML(knitr::kable(patab, caption = cap.val, format = 'html')%>% 
+    kable_styling(full_width = T, font_size = 14))
+
+})
 ```
 
 #### Carapace length
 
-```{r}
+```{r, results = 'asis'}
 # carapace length table
-cltab <- totab %>% 
-  filter(res %in% 'Average.CL') %>% 
-  select(-res) %>% 
-  unnest
+renderUI({
 
-cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
-cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+  # input
+  totab <- totab()
 
-knitr::kable(cltab, caption = cap.val)
+  cltab <- totab %>%
+    filter(res %in% 'Average.CL') %>%
+    select(-res) %>%
+    unnest
+
+  cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
+  cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+  HTML(knitr::kable(cltab, caption = cap.val, results = 'html') %>% 
+    kable_styling(full_width = T, font_size = 14))
+
+})
 ```
 
 
@@ -518,22 +638,32 @@ knitr::kable(cltab, caption = cap.val)
 
 ```{r, fig.height = 12, fig.width = 3}
 
-discomp <- envdat %>% 
-  filter(depth %in% depths) %>% 
-  left_join(crbs, by = 'CTD') %>% 
-  dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', 'diss', corvars)) %>%
-  mutate(
-    abundances = log(1 + abundances),
-    diss = factor(diss, levels = c('none', 'lo', 'hi'))
-    ) %>% 
-  filter(!is.na(diss)) %>% 
-  gather('var', 'val', -depth, -diss) %>% 
-  filter(!is.na(val))
+discomp <- reactive({
+  
+  # input
+  dep1 <- as.numeric(input$dep1)
+  dep2 <- as.numeric(input$dep2)
+  
+  discomp <- envdat %>%
+    filter(depth %in% c(dep1, dep2)) %>%
+    left_join(crbs, by = 'CTD') %>%
+    dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', 'diss', corvars)) %>%
+    mutate(
+      abundances = log(1 + abundances),
+      diss = factor(diss, levels = c('none', 'lo', 'hi'))
+      ) %>%
+    filter(!is.na(diss)) %>%
+    gather('var', 'val', -depth, -diss) %>%
+    filter(!is.na(val))
+  
+  return(discomp)
+  
+})
 
-discompave <- discomp %>% 
-  group_by(depth, diss, var) %>% 
-  summarise(val = mean(val))
-
+# discompave <- discomp %>%
+#   group_by(depth, diss, var) %>%
+#   summarise(val = mean(val))
+# 
 # p <- ggplot(discomp, aes(x = diss, y = val)) +
 #   geom_jitter(width = 0.1, alpha = 0.6) +
 #   geom_path(data = discompave, aes(group = var)) +
@@ -543,56 +673,69 @@ discompave <- discomp %>%
 #     strip.background = element_blank(),
 #     axis.title.y = element_blank(),
 #     strip.placement = 'outside'
-#   ) + 
+#   ) +
 #   ggtitle('Depths (m)')
 # p
 ```
 
 ```{r}
 # t-tests
-ttsts <- discomp %>% 
-  group_by(depth, var) %>% 
-  nest %>% 
-  mutate(ttst = map(data, function(x){
-    
-    if(length(unique(x$diss)) == 2)
-      t.test(val ~ diss, x)
-    else 
-      lm(val ~ diss, x)
-    
-  }))
+ttsts <- reactive({
+  
+  ttsts <- discomp() %>%
+    group_by(depth, var) %>%
+    nest %>%
+    mutate(ttst = map(data, function(x){
+  
+      if(length(unique(x$diss)) == 2)
+        t.test(val ~ diss, x)
+      else
+        lm(val ~ diss, x)
+  
+    }))
+  
+  return(ttsts)
+  
+})
 
-selectInput("var", "Choose variable:", unique(ttsts$var))
+renderUI({
+  
+  chcs <- unique(ttsts()$var)
+  
+  selectInput("var", "Choose variable:", chcs)  
+  
+})
+
 
 # select data from t-tests
 ttstshw <- reactive({
 
-  dat <- filter(ttsts, var %in% input$var) %>% 
+  dat <- filter(ttsts(), var %in% input$var) %>%
     .$ttst
-  
+
   if(inherits(dat[[2]], 'lm'))
     dat[[2]] <- summary(dat[[2]])
-  
+
   return(dat)
-  
+
 })
 
 # select data to plot
 ttstplo <- reactive({
-  
-  dat <- filter(ttsts, var %in% input$var) %>% 
-    select(-ttst) %>% 
+
+  dat <- filter(ttsts(), var %in% input$var) %>%
+    select(-ttst) %>%
     unnest
-     
+
 })
 
 # plot of individual variable by dissolution
 renderPlot({
-  
+
   toplo <- ttstplo()
-  
-  toploave <- toplo %>% 
-    group_by(depth, diss, var) %>% 
+
+  toploave <- toplo %>%
+    group_by(depth, diss, var) %>%
     summarise(val = mean(val))
 
   ggplot(toplo, aes(x = diss, y = val)) +
@@ -604,13 +747,13 @@ renderPlot({
       strip.background = element_blank(),
       axis.title.y = element_blank(),
       strip.placement = 'outside'
-    ) + 
+    ) +
     ggtitle('Depths (m)')
-  
+
 }, height = 300, width = 600)
 
-renderPrint({cat(depths[1], "m test\n");ttstshw()[[1]]})
-renderPrint({cat(depths[2], "m test\n");ttstshw()[[2]]})
+renderPrint({cat(input$dep1, "m test\n");ttstshw()[[1]]})
+renderPrint({cat(input$dep2, "m test\n");ttstshw()[[2]]})
 ```
 
 ## Optimal environmental factors for abundance
@@ -618,11 +761,11 @@ renderPrint({cat(depths[2], "m test\n");ttstshw()[[2]]})
 ```{r envoptprp}
 
 # abundance data to join with depsub below
-abus <- crbs %>% 
-  select(CTD, abundances) %>% 
-  na.omit %>% 
+abus <- crbs %>%
+  select(CTD, abundances) %>%
+  na.omit %>%
   mutate(abundances = log(1 + abundances))
-        
+
 # nested tibble with six columns
 # dep: depth value to subset data
 # vr: which env var that was evaluated
@@ -631,100 +774,100 @@ abus <- crbs %>%
 # opt: optimal values for env vr from nls model (min, opt, max)
 # plo: a plot of the model fit for depsub
 resopt <- crossing(
-  dep = seq(10, 200, length = 20), 
+  dep = seq(10, 200, length = 20),
   vr = kpvars
-  ) %>% 
+  ) %>%
   mutate(
-    
+
     # data filtered by dep, vr
     depsub = pmap(list(dep, vr), function(dep, kpvars){
-  
+
       # get depth integrated data
-      depsub <- envdat %>% 
-        dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>% 
-        filter(depth == dep) %>% 
-        gather('var', 'val', -depth, -CTD) %>% 
-        arrange(CTD, depth) %>% 
+      depsub <- envdat %>%
+        dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>%
+        filter(depth == dep) %>%
+        gather('var', 'val', -depth, -CTD) %>%
+        arrange(CTD, depth) %>%
         left_join(abus, by = 'CTD')
-      
+
       return(depsub)
-      
+
     }),
-    
+
     # nls mod on depsub
     mod = map(depsub, function(depsub){
-      
+
       avestr <- mean(depsub$val, na.rm = T)
       sdstr <- sd(depsub$val, na.rm = T)
       mod <- try({
         nls(abundances ~ k*exp(-1/2*(val-mu)^2/sigma^2), start=c(mu=avestr,sigma=sdstr,k=1) , data = depsub)
       })
-      
+
       if(inherits(mod, 'try-error'))
         return(NA)
-      
+
       return(mod)
-      
-    }), 
-    
+
+    }),
+
     # opt values from model
     opt = map(mod, function(mod){
-      
+
       if(anyNA(mod))
         return(NA)
-      
+
       coffs <- coefficients(mod)
       muval <- coffs['mu']
       sival <- coffs['sigma']
-      
+
       opt <- qnorm(c(0.05, 0.5, 0.95), muval, sival)
-      
+
       return(opt)
-      
+
     }),
-    
+
     # plot on model with depsub
     plo = pmap(list(depsub, mod, opt, vr), function(depsub, mod, opt, vr){
-      
+
       if(anyNA(mod))
         return(NA)
-      
+
       valrng <- range(depsub$val, na.rm = T)
-      prddat <- seq(min(valrng), max(valrng), length = 100) %>% 
+      prddat <- seq(min(valrng), max(valrng), length = 100) %>%
         data.frame(val = .)
       fitdt <- predict(mod, newdata = prddat)
       prddat <- data.frame(prddat, abundances = fitdt)
-      
+
       plo <- ggplot(depsub, aes(x = val, y = abundances)) +
         geom_point() +
-        geom_line(data = prddat) + 
+        geom_line(data = prddat) +
         geom_vline(xintercept = opt, color = 'red') +
-        scale_x_continuous(vr) + 
+        scale_x_continuous(vr) +
         scale_y_continuous("log-abundance") +
         theme_bw(base_family = 'serif')
-      
+
       return(plo)
 
     })
-    
+
   )
-```      
+```
 ```{r}
 selectInput("vr", "Choose variable:", choices = unique(resopt$vr), selected = 'Temperature')
 selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '50')
 
 renderPlot({
-  
+
   vr <- input$vr
   dep <- input$dep
-  
-  toplo <- resopt %>% 
-    filter(vr == input$vr & dep == input$dep) %>% 
-    pull(plo) %>% 
+
+  toplo <- resopt %>%
+    filter(vr == input$vr & dep == input$dep) %>%
+    pull(plo) %>%
     .[[1]]
-  
+
   return(toplo)
-  
+
 })
 
 ```
@@ -733,25 +876,25 @@ renderPlot({
 ```{r}
 
 
-cumest <- resopt %>% 
-  select(dep, vr, opt) %>% 
+cumest <- resopt %>%
+  select(dep, vr, opt) %>%
   mutate(opt = map(opt, function(opt){
-    
-    out <- matrix(opt, ncol = 3) %>% 
+
+    out <- matrix(opt, ncol = 3) %>%
       as.data.frame
     names(out) <- c('min', 'opt', 'max')
-    
+
     return(out)
-    
+
     })
-  ) %>% 
-  unnest %>% 
+  ) %>%
+  unnest %>%
   gather('est', 'opt', -dep, -vr)
 
-ggplot(cumest, aes(x = opt, y = dep, group = est,  colour = est)) + 
-  geom_point() + 
+ggplot(cumest, aes(x = opt, y = dep, group = est,  colour = est)) +
+  geom_point() +
   geom_path() +
-  scale_y_reverse() + 
+  scale_y_reverse() +
   facet_wrap(~vr, scales = 'free_x')
 
 ```
