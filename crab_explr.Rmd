@@ -45,7 +45,7 @@ corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluoresce
 
 # {.tabset}
 
-Abundances log-transfomed, one row of data with low alkalinity removed.
+Abundances log-transformed, one row of data with low alkalinity removed.
 ```{r pairsplots, fig.height = 9, fig.width = 9}
 # data prep, nested for mods
 tocor <- envdat %>% 
@@ -482,6 +482,7 @@ cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 knitr::kable(cltab, caption = cap.val)
 ```
 
+
 ## Dissolution factor analysis
 
 ```{r, fig.height = 12, fig.width = 3}
@@ -581,4 +582,146 @@ renderPrint({cat(depths[1], "m test\n");ttstshw()[[1]]})
 renderPrint({cat(depths[2], "m test\n");ttstshw()[[2]]})
 ```
 
+## Optimal environmental factors for abundance
+
+```{r envoptprp}
+
+# abundance data to join with depsub below
+abus <- crbs %>% 
+  select(CTD, abundances) %>% 
+  na.omit %>% 
+  mutate(abundances = log(1 + abundances))
+        
+# nested tibble with six columns
+# dep: depth value to subset data
+# vr: which env var that was evaluated
+# depsub: data subset by dep and vr
+# mod: nls model of abundance by vr
+# opt: optimal values for env vr from nls model (min, opt, max)
+# plo: a plot of the model fit for depsub
+resopt <- crossing(
+  dep = seq(10, 200, length = 20), 
+  vr = kpvars
+  ) %>% 
+  mutate(
+    
+    # data filtered by dep, vr
+    depsub = pmap(list(dep, vr), function(dep, kpvars){
+  
+      # get depth integrated data
+      depsub <- envdat %>% 
+        dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>% 
+        filter(depth == dep) %>% 
+        gather('var', 'val', -depth, -CTD) %>% 
+        arrange(CTD, depth) %>% 
+        left_join(abus, by = 'CTD')
+      
+      return(depsub)
+      
+    }),
+    
+    # nls mod on depsub
+    mod = map(depsub, function(depsub){
+      
+      avestr <- mean(depsub$val, na.rm = T)
+      sdstr <- sd(depsub$val, na.rm = T)
+      mod <- try({
+        nls(abundances ~ k*exp(-1/2*(val-mu)^2/sigma^2), start=c(mu=avestr,sigma=sdstr,k=1) , data = depsub)
+      })
+      
+      if(inherits(mod, 'try-error'))
+        return(NA)
+      
+      return(mod)
+      
+    }), 
+    
+    # opt values from model
+    opt = map(mod, function(mod){
+      
+      if(anyNA(mod))
+        return(NA)
+      
+      coffs <- coefficients(mod)
+      muval <- coffs['mu']
+      sival <- coffs['sigma']
+      
+      opt <- qnorm(c(0.05, 0.5, 0.95), muval, sival)
+      
+      return(opt)
+      
+    }),
+    
+    # plot on model with depsub
+    plo = pmap(list(depsub, mod, opt, vr), function(depsub, mod, opt, vr){
+      
+      if(anyNA(mod))
+        return(NA)
+      
+      valrng <- range(depsub$val, na.rm = T)
+      prddat <- seq(min(valrng), max(valrng), length = 100) %>% 
+        data.frame(val = .)
+      fitdt <- predict(mod, newdata = prddat)
+      prddat <- data.frame(prddat, abundances = fitdt)
+      
+      plo <- ggplot(depsub, aes(x = val, y = abundances)) +
+        geom_point() +
+        geom_line(data = prddat) + 
+        geom_vline(xintercept = opt, color = 'red') +
+        scale_x_continuous(vr) + 
+        scale_y_continuous("log-abundance") +
+        theme_bw(base_family = 'serif')
+      
+      return(plo)
+
+    })
+    
+  )
+```      
+```{r}
+selectInput("vr", "Choose variable:", choices = unique(resopt$vr), selected = 'Temperature')
+selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '50')
+
+renderPlot({
+  
+  vr <- input$vr
+  dep <- input$dep
+  
+  toplo <- resopt %>% 
+    filter(vr == input$vr & dep == input$dep) %>% 
+    pull(plo) %>% 
+    .[[1]]
+  
+  return(toplo)
+  
+})
+
+```
+
+
+```{r}
+
+
+cumest <- resopt %>% 
+  select(dep, vr, opt) %>% 
+  mutate(opt = map(opt, function(opt){
+    
+    out <- matrix(opt, ncol = 3) %>% 
+      as.data.frame
+    names(out) <- c('min', 'opt', 'max')
+    
+    return(out)
+    
+    })
+  ) %>% 
+  unnest %>% 
+  gather('est', 'opt', -dep, -vr)
+
+ggplot(cumest, aes(x = opt, y = dep, group = est,  colour = est)) + 
+  geom_point() + 
+  geom_path() +
+  scale_y_reverse() + 
+  facet_wrap(~vr, scales = 'free_x')
+
+```
 
