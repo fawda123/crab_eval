@@ -263,9 +263,9 @@ resp <- c(
     resp = map(resp, ~ paste(.x, paste(kpvars, collapse = '+'), sep = '~'))
     )
 fams <- list(
-    abundances = gaussian, 
-    pa = binomial, 
-    Average.CL = gaussian
+    abundances = 'gaussian', 
+    pa = 'binomial', 
+    Average.CL = 'gaussian'
   ) %>% 
   enframe('res', 'dist')
 
@@ -294,39 +294,91 @@ tomod <- envdat %>%
 ## 
 # model selection
 
+tops <- vector('list', length = nrow(tomod))
+cffs <- vector('list', length = nrow(tomod))
+
+for(i in 1:nrow(tomod)){
+  
+  x <- tomod[i, ] %>% 
+    .[['data']] %>% 
+    .[[1]] %>% 
+    filter(!is.na(val))
+ 
+  resp <- tomod[i, ] %>% 
+    pull(resp) %>% 
+    .[[1]]
+  
+  dist <- tomod[i, ] %>% 
+    pull(dist) %>% 
+    .[[1]]
+  
+  cffsmlt <- do.call('glmulti',
+                  list(formula(resp), data = x, level = 1, method = 'h', crit = 'aicc', plotty = F, report = F, fitfunction = 'glm', family = dist)) %>%            
+    coef %>%
+    data.frame %>%
+    rownames_to_column('var')
+
+  # global glm
+  globs <- paste0('glm(', resp, ', data = x, na.action = na.pass, family = "', dist, '")') %>% 
+    parse(text = .) %>% 
+    eval
+  
+  # dredge, get sum stats manually
+  drdg <- dredge(globs) 
+  drdgsub <- get.models(drdg, subset = 1:5) %>% 
+    map(., function(x){
+
+      # get mod prm, pval
+      out <- x %>% summary %>% coef %>% data.frame %>% rownames_to_column('var') %>% 
+        .[, c(1, 2, 5)]
+      names(out)[3] <- 'pval'
+      out <- out %>% 
+        mutate(
+          Estimate = round(Estimate, 2),
+          pval = p_ast(pval)
+          ) %>% 
+        unite('Estimate', Estimate, pval, sep = '') %>% 
+        spread(var, Estimate)
+      
+      # get sum stats
+      llk <- logLik(x)
+      out <- out %>%
+         mutate(
+          df = attr(llk, 'df'),
+          loglik = llk[1],
+          aicc = aicc(x)
+        )
+       
+      return(out)
+    }) %>% 
+    enframe %>% 
+    unnest %>% 
+    mutate(
+      model = 1:n(),
+      delta = aicc - aicc[1]
+      ) %>% 
+    select(model, df, loglik, aicc, delta, everything()) %>% 
+    select(-name) %>% 
+    gather('var', 'val', -model, -df, -loglik, -aicc, -delta) %>% 
+    spread(var, val, fill = '-') %>% 
+    mutate(
+      aicc = round(aicc, 2),
+      loglik = round(loglik, 2),
+      delta = round(delta, 2)
+    )
+
+  tops[[i]] <- drdgsub
+  cffs[[i]] <- cffsmlt
+   
+}
+
 # models
 mods <- tomod %>% 
+  select(depth, res) %>% 
   mutate(
-    moddat = pmap(list(data, dist, resp), function(data, dist, resp){
-
-      # filter data to remove NA
-      x <- data %>% 
-        filter(!is.na(val))
-
-      cffs <- do.call('glmulti',
-                      list(formula(resp), data = x, level = 1, method = 'h', crit = 'aicc', plotty = F, report = F, fitfunction = 'glm', family = dist)) %>%            
-        coef %>%
-        data.frame %>%
-        rownames_to_column('var')
-
-      # top five AICc models
-      globs <- glm(resp, data = x, na.action = na.pass, family = dist)
-      drdg <- dredge(globs) %>% 
-        data.frame %>% 
-        .[1:5, ]
-
-      out <- list(drdg, cffs)
-      return(out)
-      
-    })
-    
-  ) %>% 
-  select(depth, res, moddat) %>% 
-  mutate(
-    tops = map(moddat, ~ .x[[1]]),
-    cffs = map(moddat, ~ .x[[2]])
-  ) %>% 
-  select(-moddat)
+    tops = tops,
+    cffs = cffs
+  )
 ```
 
 ```{r fig.height = 8, fig.width = 8, fig.cap = 'Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep water. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (\\%) is the effect of each variable independent of all other variables.'}
@@ -412,28 +464,7 @@ grid.arrange(
 
 # tabular
 totab <- mods %>% 
-  select(-cffs) %>% 
-  mutate(
-    tops = map(tops, function(x){
-      
-      # format top models long
-      x <- x %>%
-        mutate(model = 1:nrow(.)) %>% 
-        gather('var', 'val', -model) %>% 
-        mutate(
-          val = round(val, 2),
-          val = as.character(val)
-        ) %>% 
-        spread(var, val, fill = '-')
-      x <- x[, c('model', 'X.Intercept.', names(x)[names(x) %in% kpvars], 'df', 'logLik', 'AICc', 'delta')]
-      
-      x <- x %>% 
-        rename(Int. = X.Intercept.)
-      
-      return(x) 
-      
-    })
-  )
+  select(-cffs) 
 ```
 
 #### Abundance
