@@ -581,7 +581,7 @@ renderUI({
   cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
-  HTML(knitr::kable(abutab, caption = cap.val, results = 'html') %>% 
+  HTML(knitr::kable(abutab, caption = cap.val, format = 'html') %>% 
     kable_styling(full_width = T, font_size = 14))
 
 })
@@ -627,7 +627,7 @@ renderUI({
   cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
-  HTML(knitr::kable(cltab, caption = cap.val, results = 'html') %>% 
+  HTML(knitr::kable(cltab, caption = cap.val, format = 'html') %>% 
     kable_styling(full_width = T, font_size = 14))
 
 })
