@@ -45,7 +45,7 @@ corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluoresce
 # {.tabset}
 
 ```{r}
-selectInput(inputId = 'dep1', label = 'Select first depth:', choices = seq(10, 200, by = 10), selected = 30)
+selectInput(inputId = 'dep1', label = 'Select first depth:', choices = seq(10, 200, by = 10), selected = 10)
 
 selectInput(inputId = 'dep2', label = 'Select second depth:', choices = seq(10, 200, by = 10), selected = 100)
 ```
@@ -643,14 +643,14 @@ discomp <- reactive({
   # input
   dep1 <- as.numeric(input$dep1)
   dep2 <- as.numeric(input$dep2)
-  
+
   discomp <- envdat %>%
     filter(depth %in% c(dep1, dep2)) %>%
     left_join(crbs, by = 'CTD') %>%
     dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', 'diss', corvars)) %>%
     mutate(
       abundances = log(1 + abundances),
-      diss = factor(diss, levels = c('none', 'lo', 'hi'))
+      diss = factor(diss, levels = c('none', 'hi'))
       ) %>%
     filter(!is.na(diss)) %>%
     gather('var', 'val', -depth, -diss) %>%
@@ -681,7 +681,7 @@ discomp <- reactive({
 ```{r}
 # t-tests
 ttsts <- reactive({
-  
+
   ttsts <- discomp() %>%
     group_by(depth, var) %>%
     nest %>%
@@ -710,6 +710,8 @@ renderUI({
 # select data from t-tests
 ttstshw <- reactive({
 
+  req(input$var)
+  
   dat <- filter(ttsts(), var %in% input$var) %>%
     .$ttst
 
