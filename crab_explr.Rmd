@@ -35,9 +35,6 @@ envdat <- envdat %>%
     pCO2 = pCO2.at.this.depth.not.depth.averaged
   )
 
-# exp vars to use in reg mods
-kpvars <- c('Oxygen', 'Temperature', 'Aragonite')
-
 # exp vars to use in cor eval
 corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluorescence', 'Nitrate', 'Phosphate', 'Silicate', 'Ammonia', 'pCO2_ave', 'pCO2', 'Aragonite', 'Revelle')
 ```
@@ -48,6 +45,8 @@ corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluoresce
 selectInput(inputId = 'dep1', label = 'Select first depth:', choices = seq(10, 200, by = 10), selected = 10)
 
 selectInput(inputId = 'dep2', label = 'Select second depth:', choices = seq(10, 200, by = 10), selected = 100)
+
+selectInput(inputId = 'var3', label = 'Select third variable:', choices = c('Oxygen', 'Fluorescence', 'pH'), selected = 'Oxygen')
 ```
 
 ```{r pairsplots, fig.height = 9, fig.width = 9}
@@ -71,6 +70,18 @@ tocor <- reactive({
   
 levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
 labs <- levs
+
+# three variables to model
+kpvars <- reactive({
+  
+  # inputs
+  var3 <- input$var3
+  
+  out <- c(var3, 'Temperature', 'Aragonite')
+
+  return(out)
+  
+})
 
 dep1cor <- reactive({
   
@@ -315,17 +326,6 @@ renderPlot({
 # prep data for modelling
 
 # model globals
-resp <- c(
-    abundances = 'log(1+val)',
-    pa = 'val',
-    Average.CL = 'val'
-  ) %>%
-  enframe('res', 'resp') %>%
-  group_by(res) %>%
-  nest(.key = 'resp') %>%
-  mutate(
-    resp = map(resp, ~ paste(.x, paste(kpvars, collapse = '+'), sep = '~'))
-    )
 fams <- list(
     abundances = 'gaussian',
     pa = 'binomial',
@@ -339,8 +339,23 @@ tomod <- reactive({
   # input
   dep1 <- as.numeric(input$dep1)
   dep2 <- as.numeric(input$dep2)
+  kpvars <- kpvars()
 
-  envdat %>%
+  # model formulas
+  resp <- c(
+    abundances = 'log(1+val)',
+    pa = 'val',
+    Average.CL = 'val'
+  ) %>%
+  enframe('res', 'resp') %>%
+  group_by(res) %>%
+  nest(.key = 'resp') %>%
+  mutate(
+    resp = map(resp, ~ paste(.x, paste(kpvars, collapse = '+'), sep = '~'))
+    )
+  
+  # join environmental and biological data
+  out <- envdat %>%
     filter(depth %in% c(dep1, dep2)) %>%
     left_join(crbs, by = 'CTD') %>%
     select(-diss) %>%
@@ -359,6 +374,8 @@ tomod <- reactive({
     left_join(fams, by = 'res') %>%
     left_join(resp, by = 'res')
 
+  return(out)
+  
 })
 
 # check vif values for three variable models, by depth
@@ -366,6 +383,7 @@ vifchk <- reactive({
   
   # input
   tocor <- tocor()
+  kpvars <- kpvars()
   
   # get vif values
   out <- tocor %>% 
@@ -632,6 +650,7 @@ renderUI({
 
   # input
   totab <- totab()
+  kpvars <- kpvars()
 
   abutab <- totab %>%
     filter(res %in% 'abundances') %>%
@@ -656,6 +675,7 @@ renderUI({
 
   # input
   totab <- totab()
+  kpvars <- kpvars()
 
   patab <- totab %>%
     filter(res %in% 'pa') %>%
@@ -679,6 +699,7 @@ renderUI({
 
   # input
   totab <- totab()
+  kpvars <- kpvars()
 
   cltab <- totab %>%
     filter(res %in% 'Average.CL') %>%
@@ -836,93 +857,118 @@ abus <- crbs %>%
 # mod: nls model of abundance by vr
 # opt: optimal values for env vr from nls model (min, opt, max)
 # plo: a plot of the model fit for depsub
-resopt <- crossing(
-  dep = seq(10, 200, length = 20),
-  vr = kpvars
-  ) %>%
-  mutate(
-
-    # data filtered by dep, vr
-    depsub = pmap(list(dep, vr), function(dep, kpvars){
-
-      # get depth integrated data
-      depsub <- envdat %>%
-        dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>%
-        filter(depth == dep) %>%
-        gather('var', 'val', -depth, -CTD) %>%
-        arrange(CTD, depth) %>%
-        left_join(abus, by = 'CTD')
-
-      return(depsub)
-
-    }),
-
-    # nls mod on depsub
-    mod = map(depsub, function(depsub){
-
-      avestr <- mean(depsub$val, na.rm = T)
-      sdstr <- sd(depsub$val, na.rm = T)
-      mod <- try({
-        nls(abundances ~ k*exp(-1/2*(val-mu)^2/sigma^2), start=c(mu=avestr,sigma=sdstr,k=1) , data = depsub)
+resopt <- reactive({
+  
+  # input
+  kpvars <- kpvars()
+  
+  out <- crossing(
+    dep = seq(10, 200, length = 20),
+    vr = kpvars
+    ) %>%
+    mutate(
+  
+      # data filtered by dep, vr
+      depsub = pmap(list(dep, vr), function(dep, kpvars){
+  
+        # get depth integrated data
+        depsub <- envdat %>%
+          dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>%
+          filter(depth == dep) %>%
+          gather('var', 'val', -depth, -CTD) %>%
+          arrange(CTD, depth) %>%
+          left_join(abus, by = 'CTD')
+  
+        return(depsub)
+  
+      }),
+  
+      # nls mod on depsub
+      mod = map(depsub, function(depsub){
+  
+        avestr <- mean(depsub$val, na.rm = T)
+        sdstr <- sd(depsub$val, na.rm = T)
+        mod <- try({
+          nls(abundances ~ k*exp(-1/2*(val-mu)^2/sigma^2), start=c(mu=avestr,sigma=sdstr,k=1) , data = depsub)
+        })
+  
+        if(inherits(mod, 'try-error'))
+          return(NA)
+  
+        return(mod)
+  
+      }),
+  
+      # opt values from model
+      opt = map(mod, function(mod){
+  
+        if(anyNA(mod))
+          return(NA)
+  
+        coffs <- coefficients(mod)
+        muval <- coffs['mu']
+        sival <- coffs['sigma']
+  
+        opt <- qnorm(c(0.05, 0.5, 0.95), muval, sival)
+  
+        return(opt)
+  
+      }),
+  
+      # plot on model with depsub
+      plo = pmap(list(depsub, mod, opt, vr), function(depsub, mod, opt, vr){
+  
+        if(anyNA(mod))
+          return(NA)
+  
+        valrng <- range(depsub$val, na.rm = T)
+        prddat <- seq(min(valrng), max(valrng), length = 100) %>%
+          data.frame(val = .)
+        fitdt <- predict(mod, newdata = prddat)
+        prddat <- data.frame(prddat, abundances = fitdt)
+  
+        plo <- ggplot(depsub, aes(x = val, y = abundances)) +
+          geom_point() +
+          geom_line(data = prddat) +
+          geom_vline(xintercept = opt, color = 'red') +
+          scale_x_continuous(vr) +
+          scale_y_continuous("log-abundance") +
+          theme_bw(base_family = 'serif')
+  
+        return(plo)
+  
       })
-
-      if(inherits(mod, 'try-error'))
-        return(NA)
-
-      return(mod)
-
-    }),
-
-    # opt values from model
-    opt = map(mod, function(mod){
-
-      if(anyNA(mod))
-        return(NA)
-
-      coffs <- coefficients(mod)
-      muval <- coffs['mu']
-      sival <- coffs['sigma']
-
-      opt <- qnorm(c(0.05, 0.5, 0.95), muval, sival)
-
-      return(opt)
-
-    }),
-
-    # plot on model with depsub
-    plo = pmap(list(depsub, mod, opt, vr), function(depsub, mod, opt, vr){
-
-      if(anyNA(mod))
-        return(NA)
-
-      valrng <- range(depsub$val, na.rm = T)
-      prddat <- seq(min(valrng), max(valrng), length = 100) %>%
-        data.frame(val = .)
-      fitdt <- predict(mod, newdata = prddat)
-      prddat <- data.frame(prddat, abundances = fitdt)
-
-      plo <- ggplot(depsub, aes(x = val, y = abundances)) +
-        geom_point() +
-        geom_line(data = prddat) +
-        geom_vline(xintercept = opt, color = 'red') +
-        scale_x_continuous(vr) +
-        scale_y_continuous("log-abundance") +
-        theme_bw(base_family = 'serif')
-
-      return(plo)
-
-    })
-
-  )
+  
+    )
+  
+  return(out)
+  
+})
 ```
-```{r}
-selectInput("vr", "Choose variable:", choices = unique(resopt$vr), selected = 'Temperature')
-selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '50')
+```{r, eval = T}
+renderUI({
+  
+  # input
+  resopt <- resopt()
+  
+  selectInput("vr", "Choose variable:", choices = unique(resopt$vr), selected = 'Temperature')
+  
+})
+
+renderUI({
+  
+  # input
+  resopt <- resopt()
+  
+  selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '50')
+  
+})
 
 renderPlot({
 
   vr <- input$vr
   dep <- input$dep
+  resopt <- resopt()
 
   toplo <- resopt %>%
     filter(vr == input$vr & dep == input$dep) %>%
@@ -939,26 +985,40 @@ renderPlot({
 ```{r}
 
 
-cumest <- resopt %>%
-  select(dep, vr, opt) %>%
-  mutate(opt = map(opt, function(opt){
+cumest <- reactive({
+  
+  #input
+  resopt <- resopt()
+  
+  out <- resopt %>%
+    select(dep, vr, opt) %>%
+    mutate(opt = map(opt, function(opt){
 
-    out <- matrix(opt, ncol = 3) %>%
-      as.data.frame
-    names(out) <- c('min', 'opt', 'max')
+      out <- matrix(opt, ncol = 3) %>%
+        as.data.frame
+      names(out) <- c('min', 'opt', 'max')
 
-    return(out)
+      return(out)
 
-    })
-  ) %>%
-  unnest %>%
-  gather('est', 'opt', -dep, -vr)
+      })
+    ) %>%
+    unnest %>%
+    gather('est', 'opt', -dep, -vr)
 
-ggplot(cumest, aes(x = opt, y = dep, group = est,  colour = est)) +
-  geom_point() +
-  geom_path() +
-  scale_y_reverse() +
-  facet_wrap(~vr, scales = 'free_x')
+  return(out)
+  
+})
+
+renderPlot({
+  
+  ggplot(cumest(), aes(x = opt, y = dep, group = est,  colour = est)) +
+    geom_point() +
+    geom_path() +
+    scale_y_reverse() +
+    facet_wrap(~vr, scales = 'free_x')
+    
+})
+
 
 ```
 
