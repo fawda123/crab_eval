@@ -36,7 +36,7 @@ envdat <- envdat %>%
   )
 
 # exp vars to use in reg mods
-kpvars <- c('pH', 'Temperature', 'Aragonite')
+kpvars <- c('Oxygen', 'Temperature', 'Aragonite')
 
 # exp vars to use in cor eval
 corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluorescence', 'Nitrate', 'Phosphate', 'Silicate', 'Ammonia', 'pCO2_ave', 'pCO2', 'Aragonite', 'Revelle')
@@ -360,6 +360,58 @@ tomod <- reactive({
     left_join(resp, by = 'res')
 
 })
+
+# check vif values for three variable models, by depth
+vifchk <- reactive({
+  
+  # input
+  tocor <- tocor()
+  
+  # get vif values
+  out <- tocor %>% 
+    dplyr::select_(.dots = c('depth', kpvars)) %>% 
+    group_by(depth) %>% 
+    nest %>% 
+    mutate(
+      vifchk = map(data, function(x){
+        
+        # get vif values for each var against the others
+        val <- NULL
+        for(i in names(x)){
+          
+          yval <- i
+          xvals <- names(x)[!names(x) %in% i] %>% 
+            paste(collapse = ' + ')
+          
+          frm <- formula(paste(yval, '~', xvals))
+          mod <- lm(frm, x)
+          rsq <- mod %>% 
+            summary %>% 
+            .$r.squared
+          vif <- 1 / (1 - rsq)
+          
+          val <- c(val, vif)
+          
+        }
+        
+        # format vif values as data frame for unnest
+        names(val) <- names(x)
+        val <- val %>% 
+          as.list %>% 
+          data.frame %>% 
+          round(1)
+        
+        return(val)
+        
+      })
+    ) %>% 
+    select(-data) %>% 
+    unnest
+  
+  return(out)
+  
+})
+
 ```
 
 ```{r}
@@ -461,6 +513,15 @@ mods <- reactive({
 
 })
 
+```
+
+```{r}
+renderUI({
+
+  HTML(knitr::kable(vifchk(), caption = 'VIF values for each variable relative to the others for models at the selected depths.', format = 'html') %>% 
+    kable_styling(full_width = T, font_size = 14))
+  
+})
 ```
 
 ```{r fig.height = 8, fig.width = 8}
