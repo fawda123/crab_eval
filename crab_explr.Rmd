@@ -627,7 +627,7 @@ renderPlot({
 
 Results of model selection analysis with three crab population variables (abundance, presence/absence, carapace length) by shallow and deep water. Variable importances and pooled estimates show summarized results from multiple models that evaluated all parameter combinations.  The unconditional explained variance (%) is the effect of each variable independent of all other variables.
 
-### Top models in tabular {.tabset}
+### Top models in tabular {.tabset .tabset-pills}
 
 ```{r}
 ##
@@ -715,7 +715,20 @@ renderUI({
 })
 ```
 
-## Optimal environmental factors for abundance
+## Optimal environmental factors for abundance {.tabset .tabset-pills}
+
+```{r}
+renderUI({
+  
+  # input
+  kpvars <- kpvars()
+  
+  selectInput("vr", "Choose variable:", choices = kpvars)
+  
+})
+```
+
+### Estimate guassian curve through x/y
 
 ```{r envoptprp}
 
@@ -826,15 +839,6 @@ renderUI({
   # input
   resopt <- resopt()
   
-  selectInput("vr", "Choose variable:", choices = unique(resopt$vr), selected = 'Temperature')
-  
-})
-
-renderUI({
-  
-  # input
-  resopt <- resopt()
-  
   selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '50')
   
 })
@@ -856,9 +860,7 @@ renderPlot({
 
 ```
 
-
 ```{r}
-
 
 cumest <- reactive({
   
@@ -894,6 +896,117 @@ renderPlot({
     
 })
 
+```
 
+### Use model averaging for p/a
+
+These plots show the estimated likelihood of observing crabs for a given depth across ranges of values for an environmental varialbe.  The results are based on model averages from the model selection process.  Estimates are based across the range of values observed for a selected environmental variable, while holding the other variables in the model at their minimum, median, and maximum. 
+
+```{r}
+# results from averaged p/a model
+# other two variables held at average
+avgpa <- reactive({
+
+  # input
+  tomod <- tomod()
+  vr <- input$vr
+
+  tomod <- tomod %>% 
+    filter(res %in% 'pa')
+
+  out <- list()
+  
+  for(i in 1:nrow(tomod)){
+
+    x <- tomod[i, ] %>%
+      .[['data']] %>%
+      .[[1]] %>%
+      filter(!is.na(val))
+
+    resp <- tomod[i, ] %>%
+      pull(resp) %>%
+      .[[1]]
+
+    dist <- tomod[i, ] %>%
+      pull(dist) %>%
+      .[[1]]
+
+    # model object
+    avemods <- do.call('glmulti',
+                    list(formula(resp), data = x, level = 1, method = 'h', crit = 'aicc', plotty = F, report = F, fitfunction = 'glm', family = dist)) 
+      
+    ## get data to predict
+
+    # averages for constant vars
+    avgs <- x[, !names(x) %in% c(vr, 'val')] %>% 
+      gather('var', 'val') %>% 
+      group_by(var) %>% 
+      summarise(
+        minval = min(val, na.rm = T), 
+        medval = mean(val, na.rm = T), 
+        maxval = max(val, na.rm = T)
+        ) %>% 
+      gather('cvar', 'cval', -var) %>% 
+      spread(var, cval)
+
+    # range of selected var
+    vrng <- range(x[[vr]], na.rm = T)
+    vrng <- seq(vrng[1], vrng[2], length = 100)
+    
+    # combine for prediction
+    toprd <- crossing(avgs, vrng)
+    names(toprd)[names(toprd) %in% 'vrng'] <- vr
+    
+    # get predictions
+    outprd <- predict(avemods, newdata = toprd, se.fit = T, type = 'response')
+    outprd <- data.frame(
+      toprd,
+      est = outprd$averages[1,]
+      ) 
+      # lov = outprd$variability[,1], 
+      # hiv = outprd$variability[,2])
+
+    out <- c(out, list(outprd))
+    
+  }
+  
+  # format output
+  names(out) <- tomod$depth
+  out <- out %>% 
+    enframe('depth') %>% 
+    unnest
+  
+  return(out)
+
+})
+```
+
+```{r}
+renderPlot({
+  
+  # input 
+  avgpa <- avgpa()
+  vr <- input$vr
+
+  # plot
+  p <- ggplot(avgpa, aes_string(x = vr, y = 'est', group = 'cvar')) + 
+    # geom_ribbon(aes(ymin = lov, ymax = hiv), fill = 'grey', alpha = 0.6) +
+    geom_line(aes(colour = cvar)) + 
+    facet_wrap(~ depth, scales = 'free_x') +
+    theme_bw(base_family = 'serif', base_size = 18) + 
+    theme(
+      legend.position = 'top', 
+      legend.title = element_blank(), 
+      strip.text.y = element_blank(), 
+      strip.background = element_blank(), 
+      panel.grid.minor = element_blank()
+    ) + 
+    scale_y_continuous('Likelihood of crab p/a') + 
+    scale_x_continuous(vr) #+ 
+    # scale_colour_manual(values = RColorBrewer::brewer.pal(8, 'Paired')[c(2, 4)])
+  
+  return(p)
+  
+}, height = 400)
 ```
 
