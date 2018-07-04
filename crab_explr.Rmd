@@ -839,7 +839,7 @@ renderUI({
   # input
   resopt <- resopt()
   
-  selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '50')
+  selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '100')
   
 })
 
@@ -925,7 +925,8 @@ medests <- reactive({
             lov = quantile(val, 0.05, na.rm = T), 
             mdv = quantile(val, 0.5, na.rm = T),
             hiv = quantile(val, 0.95, na.rm = T)
-          )
+          ) %>% 
+          gather('est', 'val', lov, mdv, hiv)
         
         return(out)
         
@@ -944,27 +945,83 @@ renderPlot({
   medests <- medests()
   vr <- input$vr
   
-  # data to plot
+  ## data to plot
+  
+  # observed
   obsdat <- medests %>% 
     select(-medest) %>% 
     unnest
-  meddat <- medests %>% 
+  
+  # centroids
+  cendat <- medests %>% 
     select(-depsub) %>% 
     unnest
+
+  # median centroids
+  meddat <- cendat %>% 
+    filter(est %in% 'mdv') %>% 
+    spread(var, val)
+
+  # abu centroid segs
+  abuseg <- cendat %>% 
+    filter(!(var %in% 'val' & est %in% c('hiv', 'lov'))) %>% 
+    filter(!(var %in% 'abundances' & est == 'mdv')) %>% 
+    select(-var) %>% 
+    spread(est, val)
   
-  # # plot
-  # p <- ggplot() +
-  #         geom_point(obsdat, aes(x = val, y = abundances)) +
-  #         geom_point(data = meddat)
-  #         geom_vline(xintercept = opt, color = 'red') +
-  #         scale_x_continuous(vr) +
-  #         scale_y_continuous("log-abundance") +
-  #         theme_bw(base_family = 'serif')
-  # browser()
-  # 
-})
+  # val centroid segs
+  valseg <- cendat %>% 
+    filter(!(var %in% 'abundances' & est %in% c('hiv', 'lov'))) %>% 
+    mutate(
+      est = ifelse(var == 'abundances' & est == 'mdv', 'yv', est),
+      est = ifelse(var == 'val' & est == 'mdv', 'xv', est)
+    ) %>% 
+    select(-var) %>% 
+    spread(est, val)
+ 
+  # plot
+  p <- ggplot() +
+    geom_point(data = obsdat, aes(x = val, y = abundances)) +
+    geom_errorbar(data = abuseg, aes(x = mdv, ymin = lov, ymax = hiv, group = dep), size = 1, alpha = 0.7) +
+    geom_errorbarh(data = valseg, aes(x = xv, y = yv, xmin = lov, xmax = hiv, group = dep), size = 1, alpha = 0.7) + 
+    geom_point(data = meddat, aes(x = val, y = abundances), size = 4, pch = 21, fill = 'grey') +
+    scale_x_continuous(vr) +
+    scale_y_continuous("log-abundance") +
+    facet_wrap(~dep, ncol = 2) +
+    theme_bw(base_family = 'serif', base_size = 18) + 
+    theme(
+      legend.position = 'top', 
+      legend.title = element_blank(), 
+      strip.text.y = element_blank(), 
+      strip.background = element_blank(), 
+      panel.grid.minor = element_blank()
+    )
+  
+  return(p)
+
+}, height = 400)
 ```
 
+```{r}
+renderUI({
+
+  # input
+  medests <- medests()
+  
+  # centroids
+  cendat <- medests %>% 
+    select(-depsub) %>% 
+    unnest %>% 
+    mutate(var = ifelse(var %in% 'val', vr, var)) %>% 
+    select(-vr) %>% 
+    spread(est, val) %>% 
+    select(dep, var, lov, mdv, hiv)
+  
+  HTML(knitr::kable(cendat, caption = 'Estimated 5th, median, and 95th percentiles for selected variables with abundance.', format = 'html') %>% 
+    kable_styling(full_width = T, font_size = 14))
+  
+})
+```
 
 ### Use model averaging for p/a
 
