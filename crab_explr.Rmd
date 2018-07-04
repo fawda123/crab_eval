@@ -898,9 +898,77 @@ renderPlot({
 
 ```
 
+### Median centroids
+
+```{r}
+medests <- reactive({
+
+  # inputs
+  vrflt <- input$vr
+  dep1 <- input$dep1
+  dep2 <- input$dep2
+  resopt <- resopt()
+
+  # median centroid estimates
+  medests <- resopt %>%
+    filter(vr == vrflt & dep %in% c(dep1, dep2)) %>%
+    select(-mod, -opt, -plo) %>% 
+    mutate(
+      medest = map(depsub, function(x){
+        
+        # estimate centroids, minq, maxq
+        out <- x %>% 
+          select(val, abundances) %>% 
+          gather('var', 'val', everything()) %>% 
+          group_by(var) %>% 
+          summarise(
+            lov = quantile(val, 0.05, na.rm = T), 
+            mdv = quantile(val, 0.5, na.rm = T),
+            hiv = quantile(val, 0.95, na.rm = T)
+          )
+        
+        return(out)
+        
+      })
+    )
+
+  return(medests)
+
+})
+```
+
+```{r}
+renderPlot({
+  
+  #input
+  medests <- medests()
+  vr <- input$vr
+  
+  # data to plot
+  obsdat <- medests %>% 
+    select(-medest) %>% 
+    unnest
+  meddat <- medests %>% 
+    select(-depsub) %>% 
+    unnest
+  
+  # # plot
+  # p <- ggplot() +
+  #         geom_point(obsdat, aes(x = val, y = abundances)) +
+  #         geom_point(data = meddat)
+  #         geom_vline(xintercept = opt, color = 'red') +
+  #         scale_x_continuous(vr) +
+  #         scale_y_continuous("log-abundance") +
+  #         theme_bw(base_family = 'serif')
+  # browser()
+  # 
+})
+```
+
+
 ### Use model averaging for p/a
 
-These plots show the estimated likelihood of observing crabs for a given depth across ranges of values for an environmental varialbe.  The results are based on model averages from the model selection process.  Estimates are based across the range of values observed for a selected environmental variable, while holding the other variables in the model at their minimum, median, and maximum. 
+These plots show the estimated likelihood of observing crabs for a given depth across ranges of values for an environmental variable.  The results are based on model averages from the model selection process above, presence/absence model for abundance only.  Estimates are taken from the range of values observed for a selected environmental variable, while holding the other variables in the model at their minimum, median, and maximum. 
 
 ```{r}
 # results from averaged p/a model
