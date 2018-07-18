@@ -23,16 +23,7 @@ crbs <- raw$Crabs %>%
 
 # dissolution data, seven CTD stations, true zeroes, recode levels
 crbdis <- crbdisraw %>% 
-  rename(CTD = stations) %>% 
-  select(-partial) %>% 
-  gather('var', 'val', -CTD) %>% 
-  filter(val == 1) %>% 
-  select(-val) %>% 
-  mutate(
-    var = factor(var, levels = c('dissolution', 'no dissolution'), labels = c('hi', 'none')),
-    var = as.character(var)
-    ) %>% 
-  rename(diss = var) %>% 
+  rename(diss = `Outside carapace`) %>% 
   arrange(CTD)
   
 # join dissolution with other crb data
