@@ -60,7 +60,7 @@ tocor <- reactive({
   out <- envdat %>% 
     filter(depth %in% c(dep1, dep2)) %>% 
     left_join(crbs, by = 'CTD') %>% 
-    dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', 'diss', corvars)) %>% 
+    dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', corvars)) %>% 
     filter(Alkalinity > 2000) %>% 
     mutate(abundances = log(1 + abundances))
   
@@ -329,8 +329,7 @@ renderPlot({
 fams <- list(
     abundances = 'gaussian',
     pa = 'binomial',
-    Average.CL = 'gaussian', 
-    diss = 'gaussian'
+    Average.CL = 'gaussian'
   ) %>%
   enframe('res', 'dist')
 
@@ -346,8 +345,7 @@ tomod <- reactive({
   resp <- c(
     abundances = 'log(1+val)',
     pa = 'val',
-    Average.CL = 'val', 
-    diss = 'val'
+    Average.CL = 'val'
   ) %>%
   enframe('res', 'resp') %>%
   group_by(res) %>%
@@ -361,14 +359,14 @@ tomod <- reactive({
     filter(depth %in% c(dep1, dep2)) %>%
     dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>% 
     left_join(crbs, by = 'CTD') %>%
-    gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -diss, -depth) %>%
+    gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>%
     group_by(var) %>%
     mutate(
       val = scale(val)
     ) %>%
     spread(var, val) %>%
-    dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', 'diss', kpvars)) %>%
-    gather('res', 'val', abundances, pa, Average.CL, diss) %>%
+    dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>%
+    gather('res', 'val', abundances, pa, Average.CL) %>%
     dplyr::select(depth, res, val, everything()) %>%
     # filter(Alkalinity > -2) %>%
     group_by(depth, res) %>%

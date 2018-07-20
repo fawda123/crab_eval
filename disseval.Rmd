@@ -19,16 +19,16 @@ library(vegan)
 
 source('R/funcs.R')
 
-# environment data 100m, 30m
+# environment data 30m, 30m
 envall<- read_excel('raw/WCOA16_depth_limited_stats.xlsx') %>% 
-  select(matches(c("^CTD Station$|100 m MEAN"))) %>% 
+  select(matches(c("^CTD Station$|30 m MEAN"))) %>% 
   rename(
     CTD = `CTD Station`, 
-    arag = `Arag to 100 m MEAN`,
-    ph = `pH to 100 m MEAN`,
-    oxy = `Oxy [umol/kg] to 100 m MEAN`, 
-    temp = `T [deg C] to 100 m MEAN`,
-    alk = `TA [umol/kg] to 100 m MEAN`
+    arag = `Arag to 30 m MEAN`,
+    ph = `pH to 30 m MEAN`,
+    oxy = `Oxy [umol/kg] to 30 m MEAN`, 
+    temp = `T [deg C] to 30 m MEAN`,
+    alk = `TA [umol/kg] to 30 m MEAN`
   ) %>% 
   mutate_if(is.character, as.numeric)
 
@@ -133,5 +133,14 @@ pcaxs <- toeval %>%
 pcaxs <- toeval %>% bind_cols(pcaxs)
 glm(dissval ~ PC1 + PC2, data = pcaxs, family = 'gaussian') %>% summary
 glm(disscat ~ PC1 + PC2, data = pcaxs, family = 'binomial') %>% summary
+```
+
+```{r}
+scls <- toeval %>% 
+  select(-CTD, -dissval, -disscat) %>% 
+  mutate_all(scale) %>% 
+  mutate(dissval = toeval$dissval)
+prmod <- prcomp(scls)
+ggord(prmod, vec_ext = 2)
 ```
 
