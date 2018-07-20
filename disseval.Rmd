@@ -1,0 +1,137 @@
+---
+title: "Exploration of crab dissolution"
+author: ""
+output: 
+  html_document:
+    code_folding: hide
+    css: kable.css
+self_contained: yes
+---
+
+```{r, message = F, warning = F}
+library(knitr)
+opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent', family = 'serif'), eval = T)
+
+library(tidyverse)
+library(readxl)
+library(ggord)
+library(vegan)
+
+source('R/funcs.R')
+
+# environment data 100m, 30m
+envall<- read_excel('raw/WCOA16_depth_limited_stats.xlsx') %>% 
+  select(matches(c("^CTD Station$|100 m MEAN"))) %>% 
+  rename(
+    CTD = `CTD Station`, 
+    arag = `Arag to 100 m MEAN`,
+    ph = `pH to 100 m MEAN`,
+    oxy = `Oxy [umol/kg] to 100 m MEAN`, 
+    temp = `T [deg C] to 100 m MEAN`,
+    alk = `TA [umol/kg] to 100 m MEAN`
+  ) %>% 
+  mutate_if(is.character, as.numeric)
+
+# crab dissolution data joined with env data
+toeval <- read_excel('raw/crab_diss.xlsx') %>% 
+  rename(
+    dissval = `Outside carapace`,
+    disscat = qualitative
+    ) %>% 
+  mutate(
+    disscat = factor(disscat, levels = c('lo', 'hi'), labels = c(0, 1)),
+    disscat = as.numeric(as.character(disscat))
+    ) %>% 
+  left_join(envall, by = 'CTD') 
+```
+
+Plot environmental variables by categories.
+```{r}
+# prepped for first plot
+toplo <- toeval %>% 
+  gather('var', 'val', -CTD, -dissval, -disscat)
+
+ggplot(toplo, aes(x = factor(disscat), y =val)) + 
+  geom_boxplot() + 
+  facet_wrap(~var, scales = 'free_y') + 
+  scale_x_discrete('Dissolution', labels = c('less', 'a lot'))
+
+```
+
+```{r}
+tst <- toplo %>% 
+  group_by(var) %>% 
+  nest %>% 
+  mutate(
+    tst = map(data, function(x){
+      
+      tst <- t.test(val ~ disscat, x)
+      return(tst)
+      
+      }),
+    tstglm = map(data, function(x){
+      
+      tstglm <- glm(disscat ~ val, x, family = 'binomial') %>% summary
+      return(tstglm)
+      
+    }),
+    tstaov = map(data, function(x){
+      
+      x$val <- cut(x$val, breaks = c(-Inf, median(x$val, na.rm = T), Inf), labels = c('lo', 'hi'))
+      tstaov <- aov(dissval ~ val, x) %>% summary
+      return(tstaov)
+      
+    })
+  ) %>% 
+  select(-data)
+```
+
+Wilcox (non-parameteric t-test) of differences in environmental variables by dissolution categories:
+```{r}
+ttst <- tst %>% 
+  select(var, tst) %>% 
+  deframe
+ttst
+```
+
+GLM testing effects of environmental variables on likelihood of less, a lot dissolution categories:
+```{r}
+tstglm <- tst %>% 
+  select(var, tstglm) %>% 
+  deframe
+tstglm
+```
+
+Analysis of variance evaluating continuous dissolution measures against lo/hi categories for environmental variables:
+```{r}
+tstaov <- tst %>%
+  select(var, tstaov) %>% 
+  deframe
+tstaov
+```
+
+Testing pairwise effects (temp + alk, temp x alk, temp + ph, temp x ph):
+```{r}
+glm(disscat ~ temp + alk, data = toeval, family = 'binomial') %>% 
+  summary
+glm(disscat ~ temp * alk, data = toeval, family = 'binomial') %>% 
+  summary
+glm(disscat ~ temp + ph, data = toeval, family = 'binomial') %>% 
+  summary
+glm(disscat ~ temp * ph, data = toeval, family = 'binomial') %>% 
+  summary
+```
+
+Principle components analysis and regression for combined environmental variables:
+```{r}
+pcaxs <- toeval %>% 
+  select(-CTD, -dissval, -disscat) %>% 
+  mutate_all(scale) %>% 
+  prcomp %>% 
+  .$x %>% 
+  data.frame
+pcaxs <- toeval %>% bind_cols(pcaxs)
+glm(dissval ~ PC1 + PC2, data = pcaxs, family = 'gaussian') %>% summary
+glm(disscat ~ PC1 + PC2, data = pcaxs, family = 'binomial') %>% summary
+```
+
