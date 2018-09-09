@@ -65,7 +65,32 @@ p3 <- ggplot(cmbdat, aes(x = val, y = diss, fill = factor(dep), group = factor(d
   scale_colour_manual('Depth', values = c("skyblue", "slateblue")) +
   scale_y_continuous('Dissolution')
 
-pdf('C')
-grid.arrange(
-  p1, p2, p3, ncol = 1, heights = c(0.9, 1, 0.9)
-)
+# pdf('figs/chkdelts.pdf', height = 9, width = 9, family = 'serif')
+# grid.arrange(
+#   p1, p2, p3, ncol = 1, heights = c(1, 0.8, 0.9)
+# )
+# dev.off()
+
+# correlation values
+cordat <- cmbdat %>% 
+  mutate(
+    log10abu = abundances
+  ) %>% 
+  select(-abundances, -pa) %>% 
+  gather('biovr', 'biovl', log10abu, Average.CL, diss) %>% 
+  group_by(biovr, var, dep) %>% 
+  nest %>% 
+  mutate(
+    corval = map(data, function(x){
+      
+      tst <- cor.test(x$val, x$biovl, method = 'pearson')
+      corvl <- round(tst$estimate, 2)
+      prsvl <- p_ast(tst$p.value)
+      out <- paste0(corvl, prsvl)
+      
+      return(out)
+      
+    }) 
+  ) %>% 
+  select(-data) %>% 
+  unnest
