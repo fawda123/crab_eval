@@ -2,6 +2,8 @@
 library(tidyverse)
 library(readxl)
 
+source('R/funcs.R')
+
 data(crbs)
 
 # delta environmental data
