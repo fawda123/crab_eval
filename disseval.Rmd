@@ -6,6 +6,7 @@ output:
     code_folding: hide
     css: kable.css
 self_contained: yes
+runtime: shiny
 ---
 
 ```{r, message = F, warning = F}
@@ -15,7 +16,105 @@ opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transpare
 library(tidyverse)
 library(readxl)
 library(shiny)
+library(GGally)
 
 source('R/funcs.R')
 
+# dissolution data
+dissdat <- read_excel('raw/Copy of SEM crab scoring sheet_renewed analyses_finalised.xlsx', skip = 2)
+nms <- names(dissdat)
+nms <- case_when(
+  nms %in% c('X__3') ~ 'diss_pore',
+  nms %in% c('X__6') ~ 'diss_ridg', 
+  nms %in% c('X__9') ~ 'diss_crys', 
+  nms == 'CTD station' ~ 'CTD',
+  nms == 'Body part' ~ 'prt',
+  T ~ nms
+)
+names(dissdat) <- nms
+dissdat <- dissdat %>% 
+  select(CTD, prt, diss_pore, diss_ridg, diss_crys) %>% 
+  .[-1, ] %>% 
+  fill_('CTD') %>% 
+  mutate(prt = gsub('^Body part$', 'part', prt)) %>% 
+  mutate_if(!names(.) %in% 'prt', as.numeric)
+
+# length data, all
+lengdatall <- read_excel('raw/Long deliniated lengths.xlsx') %>% 
+  rename(
+    shoreloc = `onshore = 2; offshore 1`
+  ) %>% 
+  mutate(
+    shoreloc = case_when(
+      shoreloc == 2 ~ 'onshore', 
+      shoreloc == 1 ~ 'offshore'
+    ),
+    CL = ifelse(CL > 9, NA, CL)
+  )
+
+# length dat, summarized
+lengdatsum <- lengdatall %>% 
+  gather('lenvar', 'lenval', -CTD, -shoreloc) %>%
+  group_by(CTD, shoreloc, lenvar) %>%
+  summarise(
+    avelen = mean(lenval, na.rm = T),
+    stelen = 1.96 * sd(lenval, na.rm = T)/(length(na.omit(lenval)))
+  )
 ```
+
+# Pair plots {.tabset}
+
+## All length data
+
+```{r}
+toplo <- lengdatall
+ggpairs(toplo[, -1])
+```
+
+## Length replicates averaged
+
+```{r}
+toplo <- lengdatsum %>% 
+  select(-stelen) %>% 
+  spread(lenvar, avelen)
+ggpairs(toplo[, -1])
+```
+
+## Dissolution
+
+```{r}
+ggpairs(dissdat[, -1])
+```
+
+# Length vs dissolution
+
+```{r}
+column(4, 
+       
+       selectInput('lng', 'Select length:', choices = unique(lengdatsum$lenvar))
+       
+       )
+```
+
+```{r}
+renderPlot({
+  
+  # input
+  lng <- input$lng
+  
+  toplo <- inner_join(lengdatsum, dissdat, by = 'CTD') %>% 
+    gather('distyp', 'disval', diss_pore:diss_crys) %>% 
+    filter(lenvar %in% lng)
+
+  ggplot(toplo, aes(x = disval, y = avelen)) +
+    geom_point(aes(color = shoreloc)) + 
+    geom_errorbar(aes(ymin = avelen - stelen, ymax = avelen + stelen, color = shoreloc)) +
+    facet_grid(prt ~ distyp) + 
+    geom_smooth(method = 'lm', colour = 'black', se = F) + 
+    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'grey', se = F, method = 'lm') +
+    theme_bw(base_family = 'serif') + 
+    scale_linetype_manual(values = c(0, 2))
+
+}, height = 800, width = 800)
+```
+
