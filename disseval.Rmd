@@ -62,29 +62,29 @@ lengdatsum <- lengdatall %>%
   )
 ```
 
-# Pair plots {.tabset}
+<!-- # Pair plots {.tabset} -->
 
-## All length data
+<!-- ## All length data -->
 
-```{r}
-toplo <- lengdatall
-ggpairs(toplo[, -1])
-```
+<!-- ```{r} -->
+<!-- toplo <- lengdatall -->
+<!-- ggpairs(toplo[, -1]) -->
+<!-- ``` -->
 
-## Length replicates averaged
+<!-- ## Length replicates averaged -->
 
-```{r}
-toplo <- lengdatsum %>% 
-  select(-stelen) %>% 
-  spread(lenvar, avelen)
-ggpairs(toplo[, -1])
-```
+<!-- ```{r} -->
+<!-- toplo <- lengdatsum %>%  -->
+<!--   select(-stelen) %>%  -->
+<!--   spread(lenvar, avelen) -->
+<!-- ggpairs(toplo[, -1]) -->
+<!-- ``` -->
 
-## Dissolution
+<!-- ## Dissolution -->
 
-```{r}
-ggpairs(dissdat[, -1])
-```
+<!-- ```{r} -->
+<!-- ggpairs(dissdat[, -1]) -->
+<!-- ``` -->
 
 # Length vs dissolution
 
