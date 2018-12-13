@@ -3,118 +3,87 @@ title: "Exploration of crab dissolution"
 author: ""
 output: 
   html_document:
-    code_folding: hide
     css: kable.css
 self_contained: yes
 runtime: shiny
 ---
 
-```{r, message = F, warning = F}
+```{r, message = F, warning = F, echo = F}
 library(knitr)
-opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent', family = 'serif'), eval = T)
+opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent', family = 'serif'), eval = T, echo = F)
 
 library(tidyverse)
-library(readxl)
 library(shiny)
-library(GGally)
 
 source('R/funcs.R')
 
-# dissolution data
-dissdat <- read_excel('raw/Copy of SEM crab scoring sheet_renewed analyses_finalised.xlsx', skip = 2)
-nms <- names(dissdat)
-nms <- case_when(
-  nms %in% c('X__3') ~ 'diss_pore',
-  nms %in% c('X__6') ~ 'diss_ridg', 
-  nms %in% c('X__9') ~ 'diss_crys', 
-  nms == 'CTD station' ~ 'CTD',
-  nms == 'Body part' ~ 'prt',
-  T ~ nms
-)
-names(dissdat) <- nms
-dissdat <- dissdat %>% 
-  select(CTD, prt, diss_pore, diss_ridg, diss_crys) %>% 
-  .[-1, ] %>% 
-  fill_('CTD') %>% 
-  mutate(prt = gsub('^Body part$', 'part', prt)) %>% 
-  mutate_if(!names(.) %in% 'prt', as.numeric)
-
-# length data, all
-lengdatall <- read_excel('raw/Long deliniated lengths.xlsx') %>% 
-  rename(
-    shoreloc = `onshore = 2; offshore 1`
-  ) %>% 
-  mutate(
-    shoreloc = case_when(
-      shoreloc == 2 ~ 'onshore', 
-      shoreloc == 1 ~ 'offshore'
-    ),
-    CL = ifelse(CL > 9, NA, CL)
-  )
-
-# length dat, summarized
-lengdatsum <- lengdatall %>% 
-  gather('lenvar', 'lenval', -CTD, -shoreloc) %>%
-  group_by(CTD, shoreloc, lenvar) %>%
-  summarise(
-    avelen = mean(lenval, na.rm = T),
-    stelen = 1.96 * sd(lenval, na.rm = T)/(length(na.omit(lenval)))
-  )
+data(dissdat)
+data(lengdat)
 ```
 
-<!-- # Pair plots {.tabset} -->
-
-<!-- ## All length data -->
-
-<!-- ```{r} -->
-<!-- toplo <- lengdatall -->
-<!-- ggpairs(toplo[, -1]) -->
-<!-- ``` -->
-
-<!-- ## Length replicates averaged -->
-
-<!-- ```{r} -->
-<!-- toplo <- lengdatsum %>%  -->
-<!--   select(-stelen) %>%  -->
-<!--   spread(lenvar, avelen) -->
-<!-- ggpairs(toplo[, -1]) -->
-<!-- ``` -->
-
-<!-- ## Dissolution -->
-
-<!-- ```{r} -->
-<!-- ggpairs(dissdat[, -1]) -->
-<!-- ``` -->
-
-# Length vs dissolution
-
-```{r}
+```{r selectors}
+column(12,
 column(4, 
        
-       selectInput('lng', 'Select length:', choices = unique(lengdatsum$lenvar))
+       selectInput('lng', 'Select length measure:', choices = unique(lengdat$lenvar))
+       
+       ),
+column(4, 
+       
+       selectInput('dss', 'Select dissolution measure:', choices = unique(dissdat$distyp))
        
        )
+)
 ```
 
-```{r}
-renderPlot({
+```{r reactives}
+# combined dissolution, length data to plot, model
+disdat <- reactive({
   
   # input
   lng <- input$lng
+  dss <- input$dss
+  loc <- input$loc
   
-  toplo <- inner_join(lengdatsum, dissdat, by = 'CTD') %>% 
-    gather('distyp', 'disval', diss_pore:diss_crys) %>% 
-    filter(lenvar %in% lng)
+  out <- inner_join(lengdat, dissdat, by = 'CTD') %>% 
+    filter(lenvar %in% lng) %>% 
+    filter(distyp %in% dss) 
 
-  ggplot(toplo, aes(x = disval, y = avelen)) +
-    geom_point(aes(color = shoreloc)) + 
-    geom_errorbar(aes(ymin = avelen - stelen, ymax = avelen + stelen, color = shoreloc)) +
-    facet_grid(prt ~ distyp) + 
+  return(out)
+  
+})
+
+# dissolution data plot
+displo <- reactive({
+  
+  # input
+  disdat <- disdat()
+  
+  # plot
+  p <- ggplot(disdat, aes(x = disval, y = avelen)) +
+    geom_point(aes(color = shoreloc), size = 4) + 
+    geom_errorbar(aes(ymin = avelen - stelen, ymax = avelen + stelen, color = shoreloc), width = 0.1) +
+    facet_grid(~prt) + 
     geom_smooth(method = 'lm', colour = 'black', se = F) + 
-    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'grey', se = F, method = 'lm') +
-    theme_bw(base_family = 'serif') + 
+    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+    ylab('Length') + 
+    xlab('Dissolution') +
     scale_linetype_manual(values = c(0, 2))
+  
+  return(p)
 
-}, height = 800, width = 800)
+})
+```
+
+
+```{r}
+renderPlot({displo()}, height = 300, width = 900)
 ```
 
