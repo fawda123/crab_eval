@@ -20,6 +20,7 @@ source('R/funcs.R')
 data(dissdat)
 data(lengdat)
 data(crbs)
+
 ```
 
 ```{r selectors}
@@ -33,7 +34,10 @@ column(4,
        
        selectInput('dss', 'Select dissolution measure:', choices = unique(dissdat$distyp))
        
-       )
+       ), 
+column(4, 
+      selectInput('logm', 'Log models (abundance only):', choices = c(TRUE, FALSE))
+)
 )
 ```
 
@@ -157,7 +161,6 @@ disabudat <- reactive({
   abudat <- crbs %>% 
     select(CTD, abundances) %>% 
     na.omit
-
   shoreloc <- lengdat %>% 
     select(CTD, shoreloc) %>% 
     unique
@@ -165,7 +168,6 @@ disabudat <- reactive({
   out <- inner_join(abudat, dissdat, by = 'CTD') %>% 
     left_join(shoreloc, by = 'CTD') %>% 
     filter(distyp %in% dss) 
-
   return(out)
   
 })
@@ -176,7 +178,6 @@ disabumod <- reactive({
   # input
   disabudat <- disabudat()
   logm <- input$logm
-
   ## model output
   
   # all data
@@ -220,7 +221,6 @@ disabumod <- reactive({
   out <- rbind(allmods, onsmods) %>% 
     mutate( 
       summod = map(mod, ~data.frame(
-
         `F-stat` = .x$fstatistic[1],
         `p-mod` = p_ast(pf(.x$fstatistic[1], .x$fstatistic[2], .x$fstatistic[3], lower.tail = F)),
         R2 = .x$r.squared, 
@@ -272,6 +272,124 @@ disabuplo <- reactive({
     p <- p + scale_y_log10('log-Counts')
   
   return(p)
+})
+
+# combined length, abundance data to plot, model
+lenabudat <- reactive({
+  
+  # input
+  lng <- input$lng
+  
+  abudat <- crbs %>% 
+    select(CTD, abundances) %>% 
+    na.omit
+  
+  out <- inner_join(abudat, lengdat, by = 'CTD') %>% 
+    filter(lenvar %in% lng) 
+
+  return(out)
+  
+})
+
+# regression models in plot, abundance and length
+lenabumod <- reactive({
+  
+  # input
+  lenabudat <- lenabudat()
+  logm <- input$logm
+
+  ## model output
+  browser()
+  # all data
+  allmods <- lenabudat %>% 
+    nest %>% 
+    mutate(
+      mod = map(data, function(x){
+        
+        if(logm)
+          modout <- lm(log10(abundances) ~ avelen, data = x)
+        else 
+          modout <- lm(abundances ~ avelen, data = x)
+        
+        summary(modout)
+        
+      }),
+      dattyp = 'All data'
+    )
+  
+  # onshore only
+  onsmods <- lenabudat %>% 
+    filter(shoreloc %in% 'onshore') %>% 
+    nest %>% 
+    mutate(
+      mod = map(data, function(x){
+        
+        if(logm)
+          modout <- lm(log10(abundances) ~ avelen, data = x)
+        else 
+          modout <- lm(abundances ~ avelen, data = x)
+        
+        summary(modout)
+        
+      }),
+      dattyp = 'On shore'
+    )
+  
+  # combine models get summaries
+  out <- rbind(allmods, onsmods) %>% 
+    mutate( 
+      summod = map(mod, ~data.frame(
+
+        `F-stat` = .x$fstatistic[1],
+        `p-mod` = p_ast(pf(.x$fstatistic[1], .x$fstatistic[2], .x$fstatistic[3], lower.tail = F)),
+        R2 = .x$r.squared, 
+        slope = coefficients(.x)[2, 1],
+        `t-stat` = coefficients(.x)[2, 3],
+        `p-slope` = p_ast(coefficients(.x)[2, 4]),
+        stringsAsFactors = F
+        
+      )
+    )
+  ) %>% 
+  select(dattyp, summod) %>% 
+  unnest %>% 
+  arrange(dattyp) %>% 
+  rename(
+    `Model subset` = dattyp
+  )
+  
+  return(out)
+  
+})
+
+# dissolution data plot, abundance, length
+lenabuplo <- reactive({
+  
+  # input
+  lenabudat <- lenabudat()
+  logm <- input$logm
+  
+  # plot
+  p <- ggplot(lenabudat, aes(x = avelen, y = abundances)) +
+    geom_point(aes(color = shoreloc), size = 4) + 
+    geom_errorbarh(aes(xmin = avelen - stelen, xmax = avelen + stelen, color = shoreloc), height = 0.1) +
+    geom_smooth(method = 'lm', colour = 'black', se = F) + 
+    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+    ylab('Counts') + 
+    xlab('Length') +
+    scale_linetype_manual(values = c(0, 2))
+  
+  if(logm)
+    p <- p + scale_y_log10('log-Counts')
+  
+  return(p)
 
 })
 ```
@@ -292,11 +410,6 @@ renderTable({dislenmod()})
 
 ### Abundance vs dissolution
 
-```{r}
-selectInput('logm', 'Log models:', choices = c(TRUE, FALSE))
-```
-
-
 These plots show the relationship between dissolution and abundance for the selected measures above.  Each point is based on an aggregated dissolution measure (as an average from three replicates) and the corresponding abundance (count) for the same station.  The regression lines were fit for the average dissolution and abundance measurements, where the black line is for all points and the dotted line is fit only for sites identified as onshore.  
 
 ```{r}
@@ -308,3 +421,15 @@ The table shows summary statistics for each linear model in the above plot.  The
 renderTable({disabumod()})
 ```
 
+### Abundance vs length
+
+Each point is based on an crab counts and the corresponding lengths for the same station.  The length values are also aggregated but represent average length across multiple individuals that were collected at a station.  The error bars around the length represent 95% confidence intervals for the length measurements.  The regression lines were fit for the counts and average length measurements, where the black line is for all points and the dotted line is fit only for sites identified as onshore.  
+
+```{r}
+renderPlot({lenabuplo()}, height = 300, width = 300)
+```
+
+The table shows summary statistics for each linear model in the above plot.  The model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for abundance vs length), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
+```{r}
+renderTable({lenabumod()})
+```
