@@ -19,8 +19,13 @@ source('R/funcs.R')
 
 data(dissdat)
 data(lengdat)
+data(envdatdelt)
 data(crbs)
 
+# abundance data
+abudat <- crbs %>% 
+  select(CTD, abundances) %>% 
+  na.omit
 ```
 
 ```{r selectors}
@@ -48,7 +53,6 @@ dislendat <- reactive({
   # input
   lng <- input$lng
   dss <- input$dss
-  loc <- input$loc
   
   out <- inner_join(lengdat, dissdat, by = 'CTD') %>% 
     filter(lenvar %in% lng) %>% 
@@ -97,27 +101,14 @@ dislenmod <- reactive({
   
   # combine models get summaries
   out <- rbind(allmods, onsmods) %>% 
-    mutate( 
-      summod = map(mod, ~data.frame(
-
-        `F-stat` = .x$fstatistic[1],
-        `p-mod` = p_ast(pf(.x$fstatistic[1], .x$fstatistic[2], .x$fstatistic[3], lower.tail = F)),
-        R2 = .x$r.squared, 
-        slope = coefficients(.x)[2, 1],
-        `t-stat` = coefficients(.x)[2, 3],
-        `p-slope` = p_ast(coefficients(.x)[2, 4]),
-        stringsAsFactors = F
-        
-      )
+    mutate(summod = map(mod, getsum)) %>% 
+    select(prt, dattyp, summod) %>% 
+    unnest %>% 
+    arrange(prt, dattyp) %>% 
+    rename(
+      `Crab body location` = prt, 
+      `Model subset` = dattyp
     )
-  ) %>% 
-  select(prt, dattyp, summod) %>% 
-  unnest %>% 
-  arrange(prt, dattyp) %>% 
-  rename(
-    `Crab body location` = prt, 
-    `Model subset` = dattyp
-  )
   
   return(out)
   
@@ -132,7 +123,7 @@ dislenplo <- reactive({
   # plot
   p <- ggplot(dislendat, aes(x = disval, y = avelen)) +
     geom_point(aes(color = shoreloc), size = 4) + 
-    geom_errorbar(aes(ymin = avelen - stelen, ymax = avelen + stelen, color = shoreloc), width = 0.1) +
+    geom_errorbar(aes(ymin = avelen - stelen, ymax = avelen + stelen, color = shoreloc), width = 0) +
     facet_grid(~prt) + 
     geom_smooth(method = 'lm', colour = 'black', se = F) + 
     geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
@@ -219,27 +210,15 @@ disabumod <- reactive({
   
   # combine models get summaries
   out <- rbind(allmods, onsmods) %>% 
-    mutate( 
-      summod = map(mod, ~data.frame(
-        `F-stat` = .x$fstatistic[1],
-        `p-mod` = p_ast(pf(.x$fstatistic[1], .x$fstatistic[2], .x$fstatistic[3], lower.tail = F)),
-        R2 = .x$r.squared, 
-        slope = coefficients(.x)[2, 1],
-        `t-stat` = coefficients(.x)[2, 3],
-        `p-slope` = p_ast(coefficients(.x)[2, 4]),
-        stringsAsFactors = F
-        
-      )
+    mutate(summod = map(mod, getsum)) %>% 
+    select(prt, dattyp, summod) %>% 
+    unnest %>% 
+    arrange(prt, dattyp) %>% 
+    rename(
+      `Crab body location` = prt, 
+      `Model subset` = dattyp
     )
-  ) %>% 
-  select(prt, dattyp, summod) %>% 
-  unnest %>% 
-  arrange(prt, dattyp) %>% 
-  rename(
-    `Crab body location` = prt, 
-    `Model subset` = dattyp
-  )
-  
+    
   return(out)
   
 })
@@ -280,10 +259,6 @@ lenabudat <- reactive({
   # input
   lng <- input$lng
   
-  abudat <- crbs %>% 
-    select(CTD, abundances) %>% 
-    na.omit
-  
   out <- inner_join(abudat, lengdat, by = 'CTD') %>% 
     filter(lenvar %in% lng) 
 
@@ -299,7 +274,7 @@ lenabumod <- reactive({
   logm <- input$logm
 
   ## model output
-  browser()
+
   # all data
   allmods <- lenabudat %>% 
     nest %>% 
@@ -337,27 +312,14 @@ lenabumod <- reactive({
   
   # combine models get summaries
   out <- rbind(allmods, onsmods) %>% 
-    mutate( 
-      summod = map(mod, ~data.frame(
-
-        `F-stat` = .x$fstatistic[1],
-        `p-mod` = p_ast(pf(.x$fstatistic[1], .x$fstatistic[2], .x$fstatistic[3], lower.tail = F)),
-        R2 = .x$r.squared, 
-        slope = coefficients(.x)[2, 1],
-        `t-stat` = coefficients(.x)[2, 3],
-        `p-slope` = p_ast(coefficients(.x)[2, 4]),
-        stringsAsFactors = F
-        
-      )
+    mutate(summod = map(mod, getsum)) %>%
+    select(dattyp, summod) %>% 
+    unnest %>% 
+    arrange(dattyp) %>% 
+    rename(
+      `Model subset` = dattyp
     )
-  ) %>% 
-  select(dattyp, summod) %>% 
-  unnest %>% 
-  arrange(dattyp) %>% 
-  rename(
-    `Model subset` = dattyp
-  )
-  
+    
   return(out)
   
 })
@@ -372,7 +334,7 @@ lenabuplo <- reactive({
   # plot
   p <- ggplot(lenabudat, aes(x = avelen, y = abundances)) +
     geom_point(aes(color = shoreloc), size = 4) + 
-    geom_errorbarh(aes(xmin = avelen - stelen, xmax = avelen + stelen, color = shoreloc), height = 0.1) +
+    geom_errorbarh(aes(xmin = avelen - stelen, xmax = avelen + stelen, color = shoreloc), height = 0) +
     geom_smooth(method = 'lm', colour = 'black', se = F) + 
     geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
     theme_bw(base_family = 'serif', base_size = 16) +
@@ -391,6 +353,330 @@ lenabuplo <- reactive({
   
   return(p)
 
+})
+
+# environmental data for selected depth
+envdep <- reactive({
+  
+  # inputs
+  dep <- input$dep
+  
+  out <- envdatdelt %>% 
+    filter(depth %in% dep) %>% 
+    select(-depth) %>% 
+    gather('valtyp', 'val', val, delt) %>% 
+    unite('var', var, valtyp, sep = '') %>% 
+    mutate(var = gsub('val$', '', var)) %>% 
+    filter(var %in% c('Aragonite', 'Temperature', 'pH', 'pHdelt'))
+  
+  return(out)
+  
+})
+
+# dissolution data with environmental data
+disenvdat <- reactive({
+  
+  # input
+  envdep <- envdep()
+  dss <- input$dss
+  
+  # onshore, offshore
+  shoreloc <- lengdat %>% 
+    select(CTD, shoreloc) %>% 
+    unique
+  
+  out <- inner_join(envdep, dissdat, by = 'CTD') %>% 
+    filter(distyp %in% dss) %>% 
+    left_join(shoreloc, by = 'CTD')
+
+  return(out)
+  
+})
+
+# dissolution models with environmental data
+disenvmod <- reactive({
+
+  # input
+  disenvdat <- disenvdat()
+
+  ## model output
+
+  # all data
+  allmods <- disenvdat %>%
+    group_by(var, prt) %>% 
+    nest %>%
+    mutate(
+      mod = map(data, function(x){
+
+        modout <- lm(disval ~ val, data = x)
+        summary(modout)
+
+      }),
+      dattyp = 'All data'
+    )
+
+  # onshore only
+  onsmods <- disenvdat %>%
+    group_by(var, prt) %>% 
+    filter(shoreloc %in% 'onshore') %>%
+    nest %>%
+    mutate(
+      mod = map(data, function(x){
+
+        modout <- lm(disval ~ val, data = x)
+        summary(modout)
+
+      }),
+      dattyp = 'On shore'
+    )
+
+  # combine models get summaries
+  out <- rbind(allmods, onsmods) %>%
+    mutate(summod = map(mod, getsum)) %>%
+    select(var, prt, dattyp, summod) %>%
+    unnest %>%
+    arrange(var, prt, dattyp) %>%
+    rename(
+      `Crab body location` = prt, 
+      `Model subset` = dattyp, 
+      `Environmental variable` = var
+    )
+
+  return(out)
+  
+})
+
+# dissolution data plot, environment
+disenvplo <- reactive({
+  
+  # input
+  disenvdat <- disenvdat()
+
+  # plot
+  p <- ggplot(disenvdat, aes(x = val, y = disval)) +
+    geom_point(aes(color = shoreloc), size = 4) + 
+    facet_grid(prt ~ var, scales = 'free_x') + 
+    geom_smooth(method = 'lm', colour = 'black', se = F) + 
+    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+    ylab('Dissolution') + 
+    xlab('Environmental variable') +
+    scale_linetype_manual(values = c(0, 2))
+  
+  return(p)
+  
+})
+
+# length data with environmental data
+lenenvdat <- reactive({
+  
+  # input
+  envdep <- envdep()
+  lng <- input$lng
+
+  out <- inner_join(envdep, lengdat, by = 'CTD') %>% 
+    filter(lenvar %in% lng)
+
+  return(out)
+  
+})
+
+# length models with environmental data
+lenenvmod <- reactive({
+
+  # input
+  lenenvdat <- lenenvdat()
+
+  ## model output
+
+  # all data
+  allmods <- lenenvdat %>%
+    group_by(var) %>% 
+    nest %>%
+    mutate(
+      mod = map(data, function(x){
+
+        modout <- lm(avelen ~ val, data = x)
+        summary(modout)
+
+      }),
+      dattyp = 'All data'
+    )
+
+  # onshore only
+  onsmods <- lenenvdat %>%
+    group_by(var) %>% 
+    filter(shoreloc %in% 'onshore') %>%
+    nest %>%
+    mutate(
+      mod = map(data, function(x){
+
+        modout <- lm(avelen ~ val, data = x)
+        summary(modout)
+
+      }),
+      dattyp = 'On shore'
+    )
+
+  # combine models get summaries
+  out <- rbind(allmods, onsmods) %>%
+    mutate(summod = map(mod, getsum)) %>%
+    select(var, dattyp, summod) %>%
+    unnest %>%
+    arrange(var, dattyp) %>%
+    rename(
+      `Model subset` = dattyp, 
+      `Environmental variable` = var
+    )
+
+  return(out)
+  
+})
+
+# length data plot, environment
+lenenvplo <- reactive({
+  
+  # input
+  lenenvdat <- lenenvdat()
+
+  # plot
+  p <- ggplot(lenenvdat, aes(x = val, y = avelen)) +
+    geom_point(aes(color = shoreloc), size = 4) + 
+    geom_errorbar(aes(ymin = avelen - stelen, ymax = avelen + stelen, color = shoreloc), width = 0) +
+    facet_grid( ~ var, scales = 'free_x') + 
+    geom_smooth(method = 'lm', colour = 'black', se = F) + 
+    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+    ylab('Length') + 
+    xlab('Environmental variable') +
+    scale_linetype_manual(values = c(0, 2))
+  
+  return(p)
+  
+})
+
+# abundance data with environmental data
+abuenvdat <- reactive({
+  
+  # input
+  envdep <- envdep()
+  lng <- input$lng
+
+  # onshore, offshore
+  shoreloc <- lengdat %>% 
+    select(CTD, shoreloc) %>% 
+    unique
+  
+  out <- inner_join(envdep, abudat, by = 'CTD') %>% 
+    left_join(shoreloc, by = 'CTD') %>% 
+    filter(!is.na(shoreloc))
+  
+  return(out)
+  
+})
+
+# regression models in plot, abundance
+abuenvmod <- reactive({
+  
+  # input
+  abuenvdat <- abuenvdat()
+  logm <- input$logm
+
+  ## model output
+  
+  # all data
+  allmods <- abuenvdat %>% 
+    group_by(var) %>% 
+    nest %>% 
+    mutate(
+      mod = map(data, function(x){
+        
+        if(logm)
+          modout <- lm(log10(1 + abundances) ~ val, data = x)
+        else 
+          modout <- lm(abundances ~ val, data = x)
+        
+        summary(modout)
+        
+      }),
+      dattyp = 'All data'
+    )
+  
+  # onshore only
+  onsmods <- abuenvdat %>% 
+    filter(shoreloc %in% 'onshore') %>% 
+    group_by(var) %>% 
+    nest %>% 
+    mutate(
+      mod = map(data, function(x){
+        
+        if(logm)
+          modout <- lm(log10(abundances) ~ val, data = x)
+        else 
+          modout <- lm(abundances ~ val, data = x)
+        
+        summary(modout)
+        
+      }),
+      dattyp = 'On shore'
+    )
+  
+  # combine models get summaries
+  out <- rbind(allmods, onsmods) %>% 
+    mutate(summod = map(mod, getsum)) %>% 
+    select(var, dattyp, summod) %>% 
+    unnest %>% 
+    arrange(var, dattyp) %>% 
+    rename(
+      `Environmental variable` = var,
+      `Model subset` = dattyp
+    )
+    
+  return(out)
+  
+})
+
+# aundance data plot, environment
+abuenvplo <- reactive({
+  
+  # input
+  logm <- input$logm
+  abuenvdat <- abuenvdat()
+# browser()
+  # plot
+  p <- ggplot(abuenvdat, aes(x = val, y = abundances)) +
+    geom_point(aes(color = shoreloc), size = 4) + 
+    facet_grid( ~ var, scales = 'free_x') + 
+    geom_smooth(method = 'lm', colour = 'black', se = F) + 
+    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+    ylab('Counts') + 
+    xlab('Environmental variable') +
+    scale_linetype_manual(values = c(0, 2))
+  
+  if(logm)
+    p <- p + scale_y_log10('log-Counts')
+  
+  return(p)
+  
 })
 ```
 ## {.tabset} 
@@ -432,4 +718,42 @@ renderPlot({lenabuplo()}, height = 300, width = 300)
 The table shows summary statistics for each linear model in the above plot.  The model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for abundance vs length), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
 ```{r}
 renderTable({lenabumod()})
+```
+
+### Environmental data {.tabset .tabset-pills}
+
+These tabs show the relationships of environmental variables with dissolution, length, and abundances. The drop-down menu below can be used to select environmental data from a specific depth.  Values for delta-pH are based on the difference between the observed value at the selected depth and that at the surface.  Stations 109 and 128 are excluded in the analysis because environmental data were unavailable.  
+
+```{r}
+selectInput('dep', 'Select depth for environment:', choices = sort(unique(envdatdelt$depth)), selected = 50)
+```
+
+#### Dissolution
+
+```{r}
+renderPlot({disenvplo()},height = 700, width = 800)
+```
+
+```{r}
+renderTable({disenvmod()})
+```
+
+#### Length
+
+```{r}
+renderPlot({lenenvplo()},height = 300, width = 900)
+```
+
+```{r}
+renderTable({lenenvmod()})
+```
+
+#### Abundance
+
+```{r}
+renderPlot({abuenvplo()},height = 300, width = 900)
+```
+
+```{r}
+renderTable({abuenvmod()})
 ```

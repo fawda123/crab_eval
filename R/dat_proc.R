@@ -125,3 +125,32 @@ lengdat <- lengdatall %>%
   )
 
 save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
+
+######
+# estimate delta values for selected environmental variables
+# first, gam is created to predict estimated env var at zero depth
+# then, delt value is estimated
+
+data(envdat)
+
+envdatdelt <- envdat %>% 
+  select(CTD, depth, Aragonite, Temperature, pH) %>% 
+  gather('var', 'val', -CTD, -depth) %>% 
+  filter(!CTD %in% c(109, 128)) %>% 
+  group_by(CTD, var) %>% 
+  nest %>% 
+  mutate(
+    zeroval = map(data, function(x){
+      
+      # extrapolate env variable at zero depth
+      mod <- gam(val ~ s(depth, bs = 'cs'), data = x)
+      predict(mod, newdata = data.frame(depth = 0))
+      
+    })
+  ) %>% 
+  unnest(zeroval) %>% 
+  unnest %>% 
+  mutate(delt = zeroval - val) %>% 
+  select(-zeroval)
+
+save(envdatdelt, file = 'data/envdatdelt.RData', compress = 'xz')
