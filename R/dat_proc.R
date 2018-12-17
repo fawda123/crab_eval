@@ -133,7 +133,6 @@ save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 # first, gam is created to predict estimated env var at zero depth
 # then, delt value is estimated
 
-
 CTD.df <- read.csv('raw/CTD_data.csv', stringsAsFactors = FALSE )
 
 envdatdelt <- crossing(
@@ -143,8 +142,8 @@ envdatdelt <- crossing(
 ) %>% 
   rowwise() %>% 
   mutate(
-    val = calc.1.V(data.frame(Stn = Stn), CTD.df, var, Z.D, Z.0, c(0, depth), depth)[[2]],
-    delt = calc.1.V(data.frame(Stn = Stn), CTD.df, var, Z.D, Z.0, c(0, depth), depth)[[1]],
+    val = calc.1.V(data.frame(Stn = Stn), CTD.df, var, depth, 0, c(0, depth), depth)[[2]],
+    delt = calc.1.V(data.frame(Stn = Stn), CTD.df, var, depth, 0, c(0, depth), depth)[[1]],
     var = case_when(
       var %in% 'Arag' ~ 'Aragonite',
       var %in% 'pH.TOT' ~ 'pH', 
