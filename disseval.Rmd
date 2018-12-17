@@ -20,6 +20,7 @@ source('R/funcs.R')
 data(dissdat)
 data(lengdat)
 data(envdatdelt)
+data(shoreloc)
 data(crbs)
 
 # abundance data
@@ -152,10 +153,7 @@ disabudat <- reactive({
   abudat <- crbs %>% 
     select(CTD, abundances) %>% 
     na.omit
-  shoreloc <- lengdat %>% 
-    select(CTD, shoreloc) %>% 
-    unique
-  
+
   out <- inner_join(abudat, dissdat, by = 'CTD') %>% 
     left_join(shoreloc, by = 'CTD') %>% 
     filter(distyp %in% dss) 
@@ -379,12 +377,7 @@ disenvdat <- reactive({
   # input
   envdep <- envdep()
   dss <- input$dss
-  
-  # onshore, offshore
-  shoreloc <- lengdat %>% 
-    select(CTD, shoreloc) %>% 
-    unique
-  
+
   out <- inner_join(envdep, dissdat, by = 'CTD') %>% 
     filter(distyp %in% dss) %>% 
     left_join(shoreloc, by = 'CTD')
@@ -451,7 +444,7 @@ disenvplo <- reactive({
   
   # input
   disenvdat <- disenvdat()
-
+browser()
   # plot
   p <- ggplot(disenvdat, aes(x = val, y = disval)) +
     geom_point(aes(color = shoreloc), size = 4) + 
@@ -573,11 +566,6 @@ abuenvdat <- reactive({
   # input
   envdep <- envdep()
   lng <- input$lng
-
-  # onshore, offshore
-  shoreloc <- lengdat %>% 
-    select(CTD, shoreloc) %>% 
-    unique
   
   out <- inner_join(envdep, abudat, by = 'CTD') %>% 
     left_join(shoreloc, by = 'CTD') %>% 

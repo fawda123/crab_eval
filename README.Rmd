@@ -1,9 +1,0 @@
----
-title: "README"
-output: 
-  html_document:
-    keep_md: true
-self_contained: yes
----
-
-Materials for evaluating OA water parameters with crab demographics: results [here](https://fawda123.github.io/crab_eval/results.pdf)

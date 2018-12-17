@@ -6,6 +6,8 @@ library(tidyverse)
 library(readxl)
 library(tibble)
 
+source('R/funcs.R')
+
 # matlab matrix data
 raw <- readMat('raw/DataForNina.mat')
 
@@ -131,26 +133,50 @@ save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 # first, gam is created to predict estimated env var at zero depth
 # then, delt value is estimated
 
-data(envdat)
 
-envdatdelt <- envdat %>% 
-  select(CTD, depth, Aragonite, Temperature, pH) %>% 
-  gather('var', 'val', -CTD, -depth) %>% 
-  filter(!CTD %in% c(109, 128)) %>% 
-  group_by(CTD, var) %>% 
-  nest %>% 
+CTD.df <- read.csv('raw/CTD_data.csv', stringsAsFactors = FALSE )
+
+envdatdelt <- crossing(
+  var = c('pH.TOT', 'Arag', 'CTD.T'),
+  depth = seq(10, 200, by = 10),
+  Stn = unique(CTD.df$Sta[!is.na(CTD.df$Sta)])
+) %>% 
+  rowwise() %>% 
   mutate(
-    zeroval = map(data, function(x){
-      
-      # extrapolate env variable at zero depth
-      mod <- gam(val ~ s(depth, bs = 'cs'), data = x)
-      predict(mod, newdata = data.frame(depth = 0))
-      
-    })
+    val = calc.1.V(data.frame(Stn = Stn), CTD.df, var, Z.D, Z.0, c(0, depth), depth)[[2]],
+    delt = calc.1.V(data.frame(Stn = Stn), CTD.df, var, Z.D, Z.0, c(0, depth), depth)[[1]],
+    var = case_when(
+      var %in% 'Arag' ~ 'Aragonite',
+      var %in% 'pH.TOT' ~ 'pH', 
+      var %in% 'CTD.T' ~ 'Temperature'
+    )
   ) %>% 
-  unnest(zeroval) %>% 
-  unnest %>% 
-  mutate(delt = zeroval - val) %>% 
-  select(-zeroval)
+  ungroup %>% 
+  rename(
+    CTD = Stn
+  ) %>% 
+  select(CTD, var, depth, val, delt) %>% 
+  arrange(CTD, var, depth)
 
 save(envdatdelt, file = 'data/envdatdelt.RData', compress = 'xz')
+
+######
+# get off/onshore designations
+# add 109, 128 manually
+
+data(lengdat)
+
+# onshore, offshore
+shoreloc <- lengdat %>% 
+  select(CTD, shoreloc) %>% 
+  unique
+
+toadd <- tibble(
+  CTD = c(109, 128), 
+  shoreloc = c('onshore', 'offshore')
+)
+
+shoreloc <- bind_rows(shoreloc, toadd) %>% 
+  arrange(CTD)
+
+save(shoreloc, file = 'data/shoreloc.RData', compress = 'xz')

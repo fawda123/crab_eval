@@ -16,3 +16,4 @@ All files were created from raw data in `R\dat_proc.R`
 
 * `lengdat.RData` Crab length data, more detailed than in `crbs.RData`
 
+* `shoreloc.RData` Station info of onshore/offshore for crabs
