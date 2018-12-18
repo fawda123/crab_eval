@@ -444,7 +444,7 @@ disenvplo <- reactive({
   
   # input
   disenvdat <- disenvdat()
-browser()
+
   # plot
   p <- ggplot(disenvdat, aes(x = val, y = disval)) +
     geom_point(aes(color = shoreloc), size = 4) + 
@@ -642,7 +642,7 @@ abuenvplo <- reactive({
   # input
   logm <- input$logm
   abuenvdat <- abuenvdat()
-# browser()
+
   # plot
   p <- ggplot(abuenvdat, aes(x = val, y = abundances)) +
     geom_point(aes(color = shoreloc), size = 4) + 
@@ -666,6 +666,82 @@ abuenvplo <- reactive({
   return(p)
   
 })
+
+# presence absence data with environmental data
+prsenvdat <- reactive({
+  
+  # input
+  envdep <- envdep()
+  
+  out <- inner_join(envdep, abudat, by = 'CTD') %>% 
+    mutate(prs = ifelse(abundances > 0, 1, 0)) %>% 
+    select(-abundances)
+  
+  return(out)
+  
+})
+
+# regression models in plot, presence absence
+prsenvmod <- reactive({
+  
+  # input
+  prsenvdat <- prsenvdat()
+
+  ## model output
+  
+  # all data
+  allmods <- prsenvdat %>% 
+    group_by(var) %>% 
+    nest %>% 
+    mutate(
+      mod = map(data, function(x){
+        
+        modout <- glm(prs ~ val, family = binomial(link = 'logit'), data = x)
+        modout
+        
+      }),
+      dattyp = 'All data'
+    )
+
+  # combine models get summaries
+  out <- allmods %>% 
+    mutate(summod = map(mod, getsum)) %>% 
+    select(var, dattyp, summod) %>% 
+    unnest %>% 
+    arrange(var, dattyp) %>% 
+    rename(
+      `Environmental variable` = var,
+      `Model subset` = dattyp
+    )
+    
+  return(out)
+  
+})
+
+# aundance data plot, environment
+prsenvplo <- reactive({
+  
+  # input
+  prsenvdat <- prsenvdat()
+
+  # plot
+  p <- ggplot(prsenvdat, aes(x = val, y = prs)) +
+    geom_point(size = 4, alpha = 0.7) + 
+    facet_grid( ~ var, scales = 'free_x') + 
+    geom_smooth(method = "glm", method.args = list(family = "binomial")) +
+    theme_bw(base_family = 'serif', base_size = 16) +
+    theme(
+      legend.title = element_blank(),
+      strip.background = element_blank(),
+      legend.position = 'top'
+      ) +
+    ylab('Presence/absence') + 
+    xlab('Environmental variable')
+  
+  return(p)
+  
+})
+
 ```
 ## {.tabset} 
 
@@ -744,4 +820,14 @@ renderPlot({abuenvplo()},height = 300, width = 900)
 
 ```{r}
 renderTable({abuenvmod()})
+```
+
+#### Presence/absence
+
+```{r}
+renderPlot({prsenvplo()},height = 300, width = 900)
+```
+
+```{r}
+renderTable({prsenvmod()})
 ```

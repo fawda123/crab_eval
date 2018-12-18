@@ -21,17 +21,33 @@ p_ast <- function(x){
 # summary function for regression mods
 getsum <- function(x){
   
-  out <- data.frame(
-  
-    `F-stat` = x$fstatistic[1],
-    `p-mod` = p_ast(pf(x$fstatistic[1], x$fstatistic[2], x$fstatistic[3], lower.tail = F)),
-    R2 = x$r.squared,
-    slope = coefficients(x)[2, 1],
-    `t-stat` = coefficients(x)[2, 3],
-    `p-slope` = p_ast(coefficients(x)[2, 4]),
-    stringsAsFactors = F
+  if(inherits(x, 'glm')){
     
-  )
+    out <- data.frame(
+      `Chi-stat` = car::Anova(x, type = 2)[[1]],
+      `p-mod` = p_ast(car::Anova(x, type = 2)[[3]]),
+      AIC = x$aic, 
+      slope = coef(summary(x))[2, 1],
+      `z-stat` = coef(summary(x))[2, 3],
+      `p-slope` = p_ast(coef(summary(x))[2, 4]),
+      stringsAsFactors = F
+      )
+    
+  } else {
+    
+    out <- data.frame(
+    
+      `F-stat` = x$fstatistic[1],
+      `p-mod` = p_ast(pf(x$fstatistic[1], x$fstatistic[2], x$fstatistic[3], lower.tail = F)),
+      R2 = x$r.squared,
+      slope = coefficients(x)[2, 1],
+      `t-stat` = coefficients(x)[2, 3],
+      `p-slope` = p_ast(coefficients(x)[2, 4]),
+      stringsAsFactors = F
+      
+    )
+    
+  }
   
   return(out)
   
