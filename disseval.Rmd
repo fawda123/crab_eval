@@ -14,6 +14,7 @@ opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transpare
 
 library(tidyverse)
 library(shiny)
+library(kableExtra)
 
 source('R/funcs.R')
 
@@ -369,6 +370,57 @@ envdep <- reactive({
   
   return(out)
   
+})
+
+# VIF values for envdep
+envdepvif <- reactive({
+  
+  # input
+  envdep <- envdep()
+  
+  # get vif values
+  out <- envdep %>% 
+    spread(var, val) %>% 
+    dplyr::select(Aragonite, pH, pHdelt, Temperature) %>% 
+    nest %>% 
+    mutate(
+      vifchk = map(data, function(x){
+        
+        # get vif values for each var against the others
+        val <- NULL
+        for(i in names(x)){
+          
+          yval <- i
+          xvals <- names(x)[!names(x) %in% i] %>% 
+            paste(collapse = ' + ')
+          
+          frm <- formula(paste(yval, '~', xvals))
+          mod <- lm(frm, x)
+          rsq <- mod %>% 
+            summary %>% 
+            .$r.squared
+          vif <- 1 / (1 - rsq)
+          
+          val <- c(val, vif)
+          
+        }
+        
+        # format vif values as data frame for unnest
+        names(val) <- names(x)
+        val <- val %>% 
+          as.list %>% 
+          data.frame %>% 
+          round(1)
+        
+        return(val)
+        
+      })
+    ) %>% 
+    select(-data) %>% 
+    unnest
+  
+  return(out)
+
 })
 
 # dissolution data with environmental data
@@ -741,7 +793,6 @@ prsenvplo <- reactive({
   return(p)
   
 })
-
 ```
 ## {.tabset} 
 
@@ -831,3 +882,15 @@ renderPlot({prsenvplo()},height = 300, width = 900)
 ```{r}
 renderTable({prsenvmod()})
 ```
+
+#### Bivariate comparisons
+
+```{r}
+renderUI({
+
+ HTML(knitr::kable(envdepvif(), caption = 'VIF values for each variable relative to the others for models at the selected depths.', format = 'html') %>% 
+    kable_styling(full_width = T, font_size = 14))
+  
+})
+```
+
