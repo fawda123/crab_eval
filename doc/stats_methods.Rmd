@@ -1,0 +1,14 @@
+---
+title: "Statistical analyses"
+output: 
+  bookdown::word_document2:
+    reference_docx: my_styles.docx
+urlcolor: blue
+link-citations: true
+---
+
+Biological measurements from Dungeness megalopae collected at ten stations along the North American Pacific Coast (Figure 1) were compared with synoptic environmental data from CTD profiles. These analyses were conducted to identify significant associations of dissolution, growth, and population measurements with environmental gradients of temperature, aragonite saturation state, and pH.  Associations of dissolution with growth and abundances were also evaluated to characterize potential links of dissolution with individual or population level effects. 
+
+CTD sensor profile data collected at each station included vertical casts from the surface to the bottom, whereas crab magalopae were sampled by separate tows within the first 300m of the surface. Environmental data were summarized as depth-integrated averages in 10m bins down to 200m to characterize the exposure conditions in the water column.  In addition, $\delta$pH, was estimated at 10m bins as the difference from the observed measurement at depth with that of the surface.  This measurement characterized the pH gradient as a function of depth along the shelf, where the absolute scale for relative pH was normalized between stations.  
+
+Generalized linear models were tested for each crab measurement against each environmental variable to identify significant associations.  Gaussian distributions were assumed for all response variables, except presence/absence models that used a binomial logistic disribution.  Abundance data were log-transformed.  For each bivariate comparison, a regression was fit through all stations and separately for nearshore stations where observed gradients were stronger.  Separate models were also evaluated for environmental data at different depths to identify the strongest assocation between the measurements and depth gradients.  Models and individual parameter were considered significant at $\alpha$ = 0.05.  All models had $n=10$, except presence/absence models with $n=24$ that included additional stations where tows were conducted but no crabs were found.  
