@@ -1,6 +1,6 @@
 # README
 
-Materials for evaluating OA water parameters with crab demographics: results [here](https://fawda123.github.io/crab_eval/results.pdf)
+View results for `crab_explr.Rmd` [here](https://sccwrp.shinyapps.io/crab_eval/crab_explr.Rmd), `disseval.Rmd` [here](https://sccwrp.shinyapps.io/crab_eval/disseval.Rmd)
 
 ## Data files
 
