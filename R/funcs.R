@@ -20,7 +20,7 @@ p_ast <- function(x){
 
 # summary function for regression mods
 getsum <- function(x){
-  
+  browser()
   if(inherits(x, 'glm')){
     
     out <- data.frame(
@@ -29,6 +29,7 @@ getsum <- function(x){
       AIC = x$aic, 
       slope = coef(summary(x))[2, 1],
       `z-stat` = coef(summary(x))[2, 3],
+      `p-slope-exact` = coef(summary(x))[2, 4],
       `p-slope` = p_ast(coef(summary(x))[2, 4]),
       stringsAsFactors = F
       )
@@ -42,6 +43,7 @@ getsum <- function(x){
       R2 = x$r.squared,
       slope = coefficients(x)[2, 1],
       `t-stat` = coefficients(x)[2, 3],
+      `p-slope-exact` = coefficients(x)[2, 4],
       `p-slope` = p_ast(coefficients(x)[2, 4]),
       stringsAsFactors = F
       

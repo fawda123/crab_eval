@@ -808,7 +808,7 @@ renderPlot({dislenplo()}, height = 300, width = 900)
 
 The table shows summary statistics for each linear model in the above plot.  The crab body location is where the dissolution was measured (plot facets) and the model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for length vs dissolution), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
 ```{r}
-renderTable({dislenmod()})
+renderTable({dislenmod()}, digits = 3)
 ```
 
 ### Abundance vs dissolution
@@ -821,7 +821,7 @@ renderPlot({disabuplo()}, height = 300, width = 900)
 
 The table shows summary statistics for each linear model in the above plot.  The crab body location is where the dissolution was measured (plot facets) and the model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for abundance vs dissolution), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
 ```{r}
-renderTable({disabumod()})
+renderTable({disabumod()}, digits = 3)
 ```
 
 ### Abundance vs length
@@ -834,7 +834,7 @@ renderPlot({lenabuplo()}, height = 300, width = 300)
 
 The table shows summary statistics for each linear model in the above plot.  The model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for abundance vs length), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
 ```{r}
-renderTable({lenabumod()})
+renderTable({lenabumod()}, digits = 3)
 ```
 
 ### Environmental data {.tabset .tabset-pills}
@@ -852,7 +852,7 @@ renderPlot({disenvplo()},height = 700, width = 800)
 ```
 
 ```{r}
-renderTable({disenvmod()})
+renderTable({disenvmod()}, digits = 3)
 ```
 
 #### Length
@@ -862,7 +862,7 @@ renderPlot({lenenvplo()},height = 300, width = 900)
 ```
 
 ```{r}
-renderTable({lenenvmod()})
+renderTable({lenenvmod()}, digits = 3)
 ```
 
 #### Abundance
@@ -872,7 +872,7 @@ renderPlot({abuenvplo()},height = 300, width = 900)
 ```
 
 ```{r}
-renderTable({abuenvmod()})
+renderTable({abuenvmod()}, digits = 3)
 ```
 
 #### Presence/absence
@@ -882,7 +882,7 @@ renderPlot({prsenvplo()},height = 300, width = 900)
 ```
 
 ```{r}
-renderTable({prsenvmod()})
+renderTable({prsenvmod()}, digits = 3)
 ```
 
 #### Bivariate comparisons
