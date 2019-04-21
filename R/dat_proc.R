@@ -9,10 +9,10 @@ library(tibble)
 source('R/funcs.R')
 
 # matlab matrix data
-raw <- readMat('raw/DataForNina.mat')
+raw <- readMat('data/raw/DataForNina.mat')
 
 # really small dissolution dataset
-crbdisraw <- read_excel('raw/crab_diss.xlsx')
+crbdisraw <- read_excel('data/raw/crab_diss.xlsx')
 
 ##
 # crab data
@@ -82,7 +82,7 @@ library(readxl)
 
 ##
 # dissolution data
-dissdat <- read_excel('raw/Copy of SEM crab scoring sheet_renewed analyses_finalised.xlsx', skip = 2)
+dissdat <- read_excel('data/raw/Copy of SEM crab scoring sheet_renewed analyses_finalised.xlsx', skip = 2)
 nms <- names(dissdat)
 nms <- case_when(
   nms %in% c('X__3') ~ 'diss_pore',
@@ -105,7 +105,7 @@ save(dissdat, file = 'data/dissdat.RData', compress = 'xz')
 
 ##
 # length data, all
-lengdatall <- read_excel('raw/Long deliniated lengths.xlsx') %>% 
+lengdatall <- read_excel('data/raw/Long deliniated lengths.xlsx') %>% 
   rename(
     shoreloc = `onshore = 2; offshore 1`
   ) %>% 
@@ -133,7 +133,7 @@ save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 # first, gam is created to predict estimated env var at zero depth
 # then, delt value is estimated
 
-CTD.df <- read.csv('raw/CTD_data.csv', stringsAsFactors = FALSE )
+CTD.df <- read.csv('data/raw/CTD_data.csv', stringsAsFactors = FALSE )
 
 envdatdelt <- crossing(
   var = c('pH.TOT', 'Arag', 'CTD.T'),

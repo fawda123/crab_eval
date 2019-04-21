@@ -7,7 +7,7 @@ source('R/funcs.R')
 data(crbs)
 
 # delta environmental data
-deldat <- read_excel('raw/delta values for crabs.xlsx') %>% 
+deldat <- read_excel('data/raw/delta values for crabs.xlsx') %>% 
   rename(CTD = Station)
 
 # combine env and crb data

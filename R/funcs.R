@@ -57,7 +57,7 @@ getsum <- function(x){
 
 ######
 # get delta and depth-integrated environmental values
-# original script from raw/Dunge_crab_env.R
+# original script from data/raw/Dunge_crab_env.R
 calc.1.V <- function( data.df, CTD.df, V.name, Z.D, Z.0, Z.range, Z.layer ) {
   n.stn <- nrow( data.df )
   
