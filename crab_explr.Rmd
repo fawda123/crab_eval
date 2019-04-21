@@ -3,15 +3,14 @@ title: "Exploratory analysis of crab OA response"
 author: ""
 output: 
   html_document:
-    code_folding: hide
     css: kable.css
 self_contained: yes
 runtime: shiny
 ---
 
-```{r, message = F, warning = F}
+```{r, message = F, warning = F, echo = FALSE}
 library(knitr)
-opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent', family = 'serif'), eval = T)
+opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transparent', family = 'serif'), eval = T, echo = F)
 
 library(tidyverse)
 library(glmulti)
@@ -26,6 +25,8 @@ library(kableExtra)
 source('R/funcs.R')
 
 data(crbs)
+data(dissdat)
+data(lengdat)
 data(envdat)
 
 # rename some variables
@@ -36,59 +37,92 @@ envdat <- envdat %>%
   )
 
 # exp vars to use in cor eval
-corvars <- c('pH', 'Temperature', 'Alkalinity', 'Salinity', 'Oxygen', 'Fluorescence', 'Nitrate', 'Phosphate', 'Silicate', 'Ammonia', 'pCO2_ave', 'pCO2', 'Aragonite', 'Revelle')
+corvars <- c('pH', 'Temperature', 'Oxygen', 'Fluorescence', 'pCO2', 'Aragonite')
 ```
 
 # {.tabset}
 
 ```{r}
-selectInput(inputId = 'dep1', label = 'Select first depth:', choices = seq(10, 200, by = 10), selected = 10)
-
-selectInput(inputId = 'dep2', label = 'Select second depth:', choices = seq(10, 200, by = 10), selected = 100)
-
-selectInput(inputId = 'var3', label = 'Select third variable:', choices = c('Oxygen', 'Fluorescence', 'pH'), selected = 'Oxygen')
+column(12, 
+  column(4,
+    selectInput(inputId = 'dep1', label = 'Select first depth:', choices = seq(10, 200, by = 10), selected = 10)
+  ), 
+  column(4, 
+    selectInput(inputId = 'dep2', label = 'Select second depth:', choices = seq(10, 200, by = 10), selected = 100)
+  )
+)
+column(12, 
+  column(4, 
+    selectInput('lng', 'Select length measure:', choices = unique(lengdat$lenvar))
+  ),
+column(4, 
+    selectInput('dss', 'Select dissolution measure:', choices = unique(dissdat$distyp))
+  ),
+  column(4, 
+    selectInput('dssloc', 'Select dissolution location:', choices = unique(dissdat$prt))
+  )  
+)
 ```
 
 ```{r pairsplots, fig.height = 9, fig.width = 9}
+# all crab bio data with selected dissolution, length measures
+crbs_eval <- reactive({
+  
+  # inputs
+  lng <- input$lng
+  dss <- input$dss
+  dssloc <- input$dssloc
+  
+  # crbs, select only abundance, p/a
+  crbs <- crbs %>% 
+    select(CTD, abundances, pa)
+  
+  # filter length and dissolution data
+  lengdatsel <- lengdat %>% 
+    filter(lenvar %in% lng) %>% 
+    select(CTD, avelen) %>% 
+    rename(length = avelen)
+  dissdatsel <- dissdat %>% 
+    filter(distyp %in% dss) %>% 
+    filter(prt %in% dssloc) %>% 
+    select(CTD, disval) %>% 
+    rename(dissolution = disval)
+  
+  out <- crbs %>% 
+    left_join(lengdatsel, by = 'CTD') %>% 
+    left_join(dissdatsel, by = 'CTD')
+
+  return(out)
+  
+})
 # data prep, nested for mods
 tocor <- reactive({
   
   # input
   dep1 <- as.numeric(input$dep1)
   dep2 <- as.numeric(input$dep2)
-  
+  crbs_eval <- crbs_eval()
+
   out <- envdat %>% 
     filter(depth %in% c(dep1, dep2)) %>% 
-    left_join(crbs, by = 'CTD') %>% 
-    dplyr::select_(.dots = c('depth', 'abundances', 'Average.CL', corvars)) %>% 
-    filter(Alkalinity > 2000) %>% 
+    left_join(crbs_eval, by = 'CTD') %>% 
+    dplyr::select_(.dots = c('depth', 'abundances', 'length', 'dissolution', corvars)) %>% 
     mutate(abundances = log(1 + abundances))
   
   return(out)
   
 })
   
-levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
+levs <- c(sort(corvars), sort(c('abundances', 'length', 'dissolution')))
 labs <- levs
-
-# three variables to model
-kpvars <- reactive({
-  
-  # inputs
-  var3 <- input$var3
-  
-  out <- c(var3, 'Temperature', 'Aragonite')
-
-  return(out)
-  
-})
 
 dep1cor <- reactive({
   
   # input
   dep1 <- as.numeric(input$dep1)
+  tocor <- tocor()
   
-  dep1cor <- tocor() %>% 
+  dep1cor <- tocor %>% 
     filter(depth == dep1) %>% 
     select(-depth)
   
@@ -102,8 +136,9 @@ dep2cor <- reactive({
 
   # input
   dep2 <- as.numeric(input$dep2)
-
-  dep2cor <- tocor() %>%
+  tocor <- tocor()
+  
+  dep2cor <- tocor %>%
     filter(depth == dep2) %>%
     select(-depth)
 
@@ -117,18 +152,19 @@ dep2cor <- reactive({
 
 ## First selected depth
 
-```{r fig.height = 8, fig.width = 8}
+```{r fig.height = 5, fig.width = 5}
 renderPlot({
 
   # inputs
   dep1 <- as.numeric(input$dep1)
+  dep1cor <- dep1cor()
 
   pairs(dep1cor(), gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', dep1, ' m'), row1attop = F)
 
-}, width = 700, height = 700)
+}, width = 400, height = 400)
 ```
 
-```{r, fig.height = 7, fig.width = 7}
+```{r, fig.height = 5, fig.width = 5}
 # all correlations
 renderPlot({
 
@@ -203,32 +239,33 @@ renderPlot({
     scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
     scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
     scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
-    geom_hline(yintercept = 2.5, size = 1.5) +
-    geom_vline(xintercept = 2.5, size = 1.5)
+    geom_hline(yintercept = 3.5, size = 1.5) +
+    geom_vline(xintercept = 3.5, size = 1.5)
 
   # Code to override clipping
   gt <- ggplot_gtable(ggplot_build(p))
   gt$layout$clip[gt$layout$name == "panel"] <- "off"
   grid.draw(gt)
 
-}, width = 700, height = 700)
+}, width = 400, height = 400)
 
 ```
 
 ## Second selected depth
 
-```{r fig.height = 8, fig.width = 8}
+```{r fig.height = 5, fig.width = 5}
 renderPlot({
 
   # inputs
   dep2 <- as.numeric(input$dep2)
+  dep2cor <- dep2cor()
 
   pairs(dep2cor(), gap = 0, cex = 1, col = 'grey', main = paste0('Env. data from ', dep2, ' m'), row1attop = F)
 
-}, width = 800, height = 800)
+}, width = 400, height = 400)
 ```
 
-```{r, fig.height = 7, fig.width = 7}
+```{r, fig.height = 5, fig.width = 5}
 # all correlations
 renderPlot({
 
@@ -260,7 +297,7 @@ renderPlot({
     ) %>%
     unnest %>%
     select(-rowname)
-  levs <- c(sort(corvars), sort(c('abundances', 'Average.CL')))
+  levs <- c(sort(corvars), sort(c('abundances', 'length', 'dissolution')))
   labs <- levs
   prplo <- crs %>%
     separate(pr, c('cor', 'sig'), sep = ' ') %>%
@@ -305,15 +342,15 @@ renderPlot({
     scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
     scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
     scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("red"), midpoint = 0) +
-    geom_hline(yintercept = 2.5, size = 1.5) +
-    geom_vline(xintercept = 2.5, size = 1.5)
+    geom_hline(yintercept = 3.5, size = 1.5) +
+    geom_vline(xintercept = 3.5, size = 1.5)
 
   # Code to override clipping
   gt <- ggplot_gtable(ggplot_build(p))
   gt$layout$clip[gt$layout$name == "panel"] <- "off"
   grid.draw(gt)
 
-}, width = 700, height = 700)
+}, width = 400, height = 400)
 
 ```
 
@@ -329,7 +366,8 @@ renderPlot({
 fams <- list(
     abundances = 'gaussian',
     pa = 'binomial',
-    Average.CL = 'gaussian'
+    length = 'gaussian', 
+    dissolution = 'gaussian'
   ) %>%
   enframe('res', 'dist')
 
@@ -339,36 +377,36 @@ tomod <- reactive({
   # input
   dep1 <- as.numeric(input$dep1)
   dep2 <- as.numeric(input$dep2)
-  kpvars <- kpvars()
+  crbs_eval <- crbs_eval()
 
   # model formulas
   resp <- c(
     abundances = 'log(1+val)',
     pa = 'val',
-    Average.CL = 'val'
+    length = 'val', 
+    dissolution = 'val'
   ) %>%
   enframe('res', 'resp') %>%
   group_by(res) %>%
   nest(.key = 'resp') %>%
   mutate(
-    resp = map(resp, ~ paste(.x, paste(kpvars, collapse = '+'), sep = '~'))
+    resp = map(resp, ~ paste(.x, paste(corvars, collapse = '+'), sep = '~'))
     )
   
   # join environmental and biological data
   out <- envdat %>%
     filter(depth %in% c(dep1, dep2)) %>%
-    dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>% 
-    left_join(crbs, by = 'CTD') %>%
-    gather('var', 'val', -CTD, -abundances, -pa, -Average.CL, -depth) %>%
+    dplyr::select_(.dots = c('depth', 'CTD', corvars)) %>% 
+    left_join(crbs_eval, by = 'CTD') %>%
+    gather('var', 'val', -CTD, -abundances, -pa, -length, -dissolution, -depth) %>%
     group_by(var) %>%
     mutate(
       val = scale(val)
     ) %>%
     spread(var, val) %>%
-    dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'Average.CL', kpvars)) %>%
-    gather('res', 'val', abundances, pa, Average.CL) %>%
+    dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'length', 'dissolution', corvars)) %>%
+    gather('res', 'val', abundances, pa, length, dissolution) %>%
     dplyr::select(depth, res, val, everything()) %>%
-    # filter(Alkalinity > -2) %>%
     group_by(depth, res) %>%
     nest %>%
     left_join(fams, by = 'res') %>%
@@ -383,11 +421,10 @@ vifchk <- reactive({
   
   # input
   tocor <- tocor()
-  kpvars <- kpvars()
   
   # get vif values
   out <- tocor %>% 
-    dplyr::select_(.dots = c('depth', kpvars)) %>% 
+    dplyr::select_(.dots = c('depth', corvars)) %>% 
     group_by(depth) %>% 
     nest %>% 
     mutate(
@@ -449,7 +486,7 @@ mods <- reactive({
     x <- tomod[i, ] %>%
       .[['data']] %>%
       .[[1]] %>%
-      filter(!is.na(val))
+      na.omit
 
     resp <- tomod[i, ] %>%
       pull(resp) %>%
@@ -557,8 +594,8 @@ renderPlot({
     mutate(
       `Depth (m)` = factor(depth),
       res = factor(res,
-                   levels = c('abundances', 'pa', 'Average.CL'),
-                   labels = c('Abundance', 'Pres./Abs.', 'Ave. carapace length'))
+                   levels = c('abundances', 'pa', 'length', 'dissolution'),
+                   labels = c('Abundance', 'Pres./Abs.', 'Length', 'Dissolution'))
       )
   names(toplo) <- gsub('\\.*', '', names(toplo))
 
@@ -650,7 +687,6 @@ renderUI({
 
   # input
   totab <- totab()
-  kpvars <- kpvars()
 
   abutab <- totab %>%
     filter(res %in% 'abundances') %>%
@@ -658,7 +694,7 @@ renderUI({
     unnest %>%
     mutate(depth = paste(depth, 'm'))
 
-  cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+  cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(corvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
   HTML(knitr::kable(abutab, caption = cap.val, format = 'html') %>% 
@@ -675,14 +711,13 @@ renderUI({
 
   # input
   totab <- totab()
-  kpvars <- kpvars()
 
   patab <- totab %>%
     filter(res %in% 'pa') %>%
     select(-res) %>%
     unnest
 
-  cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+  cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep water. Input variables were ', paste(tolower(sort(corvars)), collapse = ', '), '. All explanatory variables were scaled and centered.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
   HTML(knitr::kable(patab, caption = cap.val, format = 'html')%>% 
@@ -691,7 +726,7 @@ renderUI({
 })
 ```
 
-#### Carapace length
+#### Length
 
 ```{r, results = 'asis'}
 # carapace length table
@@ -699,14 +734,36 @@ renderUI({
 
   # input
   totab <- totab()
-  kpvars <- kpvars()
 
   cltab <- totab %>%
-    filter(res %in% 'Average.CL') %>%
+    filter(res %in% 'length') %>%
     select(-res) %>%
     unnest
 
-  cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(kpvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
+  cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(corvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
+  cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
+
+  HTML(knitr::kable(cltab, caption = cap.val, format = 'html') %>% 
+    kable_styling(full_width = T, font_size = 14))
+
+})
+```
+
+#### Dissolution
+
+```{r, results = 'asis'}
+# carapace length table
+renderUI({
+
+  # input
+  totab <- totab()
+
+  cltab <- totab %>%
+    filter(res %in% 'dissolution') %>%
+    select(-res) %>%
+    unnest
+
+  cap.val<-paste0('Top five selected models for crab dissolution at shallow and deep water. Input variables were ', paste(tolower(sort(corvars)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
   HTML(knitr::kable(cltab, caption = cap.val, format = 'html') %>% 
@@ -718,310 +775,8 @@ renderUI({
 ## Optimal environmental factors for abundance {.tabset .tabset-pills}
 
 ```{r}
-renderUI({
-  
-  # input
-  kpvars <- kpvars()
-  
-  selectInput("vr", "Choose variable:", choices = kpvars)
-  
-})
-```
+selectInput("vr", "Choose variable:", choices = corvars)
 
-### Estimate guassian curve through x/y
-
-```{r envoptprp}
-
-# abundance data to join with depsub below
-abus <- crbs %>%
-  select(CTD, abundances) %>%
-  na.omit %>%
-  mutate(abundances = log(1 + abundances))
-
-# nested tibble with six columns
-# dep: depth value to subset data
-# vr: which env var that was evaluated
-# depsub: data subset by dep and vr
-# mod: nls model of abundance by vr
-# opt: optimal values for env vr from nls model (min, opt, max)
-# plo: a plot of the model fit for depsub
-resopt <- reactive({
-  
-  # input
-  kpvars <- kpvars()
-  
-  out <- crossing(
-    dep = seq(10, 200, length = 20),
-    vr = kpvars
-    ) %>%
-    mutate(
-  
-      # data filtered by dep, vr
-      depsub = pmap(list(dep, vr), function(dep, kpvars){
-  
-        # get depth integrated data
-        depsub <- envdat %>%
-          dplyr::select_(.dots = c('depth', 'CTD', kpvars)) %>%
-          filter(depth == dep) %>%
-          gather('var', 'val', -depth, -CTD) %>%
-          arrange(CTD, depth) %>%
-          left_join(abus, by = 'CTD')
-  
-        return(depsub)
-  
-      }),
-  
-      # nls mod on depsub
-      mod = map(depsub, function(depsub){
-  
-        avestr <- mean(depsub$val, na.rm = T)
-        sdstr <- sd(depsub$val, na.rm = T)
-        mod <- try({
-          nls(abundances ~ k*exp(-1/2*(val-mu)^2/sigma^2), start=c(mu=avestr,sigma=sdstr,k=1) , data = depsub)
-        })
-  
-        if(inherits(mod, 'try-error'))
-          return(NA)
-  
-        return(mod)
-  
-      }),
-  
-      # opt values from model
-      opt = map(mod, function(mod){
-  
-        if(anyNA(mod))
-          return(NA)
-  
-        coffs <- coefficients(mod)
-        muval <- coffs['mu']
-        sival <- coffs['sigma']
-  
-        opt <- qnorm(c(0.05, 0.5, 0.95), muval, sival)
-  
-        return(opt)
-  
-      }),
-  
-      # plot on model with depsub
-      plo = pmap(list(depsub, mod, opt, vr), function(depsub, mod, opt, vr){
-  
-        if(anyNA(mod))
-          return(NA)
-  
-        valrng <- range(depsub$val, na.rm = T)
-        prddat <- seq(min(valrng), max(valrng), length = 100) %>%
-          data.frame(val = .)
-        fitdt <- predict(mod, newdata = prddat)
-        prddat <- data.frame(prddat, abundances = fitdt)
-  
-        plo <- ggplot(depsub, aes(x = val, y = abundances)) +
-          geom_point() +
-          geom_line(data = prddat) +
-          geom_vline(xintercept = opt, color = 'red') +
-          scale_x_continuous(vr) +
-          scale_y_continuous("log-abundance") +
-          theme_bw(base_family = 'serif')
-  
-        return(plo)
-  
-      })
-  
-    )
-  
-  return(out)
-  
-})
-```
-```{r, eval = T}
-renderUI({
-  
-  # input
-  resopt <- resopt()
-  
-  selectInput("dep", "Choose depth:", choices = unique(resopt$dep), selected = '100')
-  
-})
-
-renderPlot({
-
-  vr <- input$vr
-  dep <- input$dep
-  resopt <- resopt()
-
-  toplo <- resopt %>%
-    filter(vr == input$vr & dep == input$dep) %>%
-    pull(plo) %>%
-    .[[1]]
-
-  return(toplo)
-
-})
-
-```
-
-```{r}
-
-cumest <- reactive({
-  
-  #input
-  resopt <- resopt()
-  
-  out <- resopt %>%
-    select(dep, vr, opt) %>%
-    mutate(opt = map(opt, function(opt){
-
-      out <- matrix(opt, ncol = 3) %>%
-        as.data.frame
-      names(out) <- c('min', 'opt', 'max')
-
-      return(out)
-
-      })
-    ) %>%
-    unnest %>%
-    gather('est', 'opt', -dep, -vr)
-
-  return(out)
-  
-})
-
-renderPlot({
-  
-  ggplot(cumest(), aes(x = opt, y = dep, group = est,  colour = est)) +
-    geom_point() +
-    geom_path() +
-    scale_y_reverse() +
-    facet_wrap(~vr, scales = 'free_x')
-    
-})
-
-```
-
-### Median centroids
-
-```{r}
-medests <- reactive({
-
-  # inputs
-  vrflt <- input$vr
-  dep1 <- input$dep1
-  dep2 <- input$dep2
-  resopt <- resopt()
-
-  # median centroid estimates
-  medests <- resopt %>%
-    filter(vr == vrflt & dep %in% c(dep1, dep2)) %>%
-    select(-mod, -opt, -plo) %>% 
-    mutate(
-      medest = map(depsub, function(x){
-        
-        # estimate centroids, minq, maxq
-        out <- x %>% 
-          select(val, abundances) %>% 
-          gather('var', 'val', everything()) %>% 
-          group_by(var) %>% 
-          summarise(
-            lov = quantile(val, 0.05, na.rm = T), 
-            mdv = quantile(val, 0.5, na.rm = T),
-            hiv = quantile(val, 0.95, na.rm = T)
-          ) %>% 
-          gather('est', 'val', lov, mdv, hiv)
-        
-        return(out)
-        
-      })
-    )
-
-  return(medests)
-
-})
-```
-
-```{r}
-renderPlot({
-  
-  #input
-  medests <- medests()
-  vr <- input$vr
-  
-  ## data to plot
-  
-  # observed
-  obsdat <- medests %>% 
-    select(-medest) %>% 
-    unnest
-  
-  # centroids
-  cendat <- medests %>% 
-    select(-depsub) %>% 
-    unnest
-
-  # median centroids
-  meddat <- cendat %>% 
-    filter(est %in% 'mdv') %>% 
-    spread(var, val)
-
-  # abu centroid segs
-  abuseg <- cendat %>% 
-    filter(!(var %in% 'val' & est %in% c('hiv', 'lov'))) %>% 
-    filter(!(var %in% 'abundances' & est == 'mdv')) %>% 
-    select(-var) %>% 
-    spread(est, val)
-  
-  # val centroid segs
-  valseg <- cendat %>% 
-    filter(!(var %in% 'abundances' & est %in% c('hiv', 'lov'))) %>% 
-    mutate(
-      est = ifelse(var == 'abundances' & est == 'mdv', 'yv', est),
-      est = ifelse(var == 'val' & est == 'mdv', 'xv', est)
-    ) %>% 
-    select(-var) %>% 
-    spread(est, val)
- 
-  # plot
-  p <- ggplot() +
-    geom_point(data = obsdat, aes(x = val, y = abundances)) +
-    geom_errorbar(data = abuseg, aes(x = mdv, ymin = lov, ymax = hiv, group = dep), size = 1, alpha = 0.7) +
-    geom_errorbarh(data = valseg, aes(x = xv, y = yv, xmin = lov, xmax = hiv, group = dep), size = 1, alpha = 0.7) + 
-    geom_point(data = meddat, aes(x = val, y = abundances), size = 4, pch = 21, fill = 'grey') +
-    scale_x_continuous(vr) +
-    scale_y_continuous("log-abundance") +
-    facet_wrap(~dep, ncol = 2) +
-    theme_bw(base_family = 'serif', base_size = 18) + 
-    theme(
-      legend.position = 'top', 
-      legend.title = element_blank(), 
-      strip.text.y = element_blank(), 
-      strip.background = element_blank(), 
-      panel.grid.minor = element_blank()
-    )
-  
-  return(p)
-
-}, height = 400)
-
-```
-
-```{r}
-renderUI({
-
-  # input
-  medests <- medests()
-  
-  # centroids
-  cendat <- medests %>% 
-    select(-depsub) %>% 
-    unnest %>% 
-    mutate(var = ifelse(var %in% 'val', vr, var)) %>% 
-    select(-vr) %>% 
-    spread(est, val) %>% 
-    select(dep, var, lov, mdv, hiv)
-  
-  HTML(knitr::kable(cendat, caption = 'Estimated 5th, median, and 95th percentiles for selected variables with abundance.', format = 'html') %>% 
-    kable_styling(full_width = T, font_size = 14))
-  
-})
 ```
 
 ### Use model averaging for p/a

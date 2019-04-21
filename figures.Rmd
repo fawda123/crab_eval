@@ -1,0 +1,44 @@
+---
+output: 
+  bookdown::html_document2:
+    code_folding: hide
+---
+
+```{r message = F, warning = F, results = 'hide',echo=F}
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/')
+
+library(tidyverse)
+library(patchwork)
+
+prj <- 4326 # wgs84
+
+source('R/funcs.R')
+
+pbase <- theme_bw(base_size = 12, base_family = 'serif') + 
+  theme(
+    axis.title = element_blank(), 
+    strip.background = element_blank() 
+  ) 
+```
+
+# Figures {.tabset}
+
+## Layout
+
+Review comments received from PNAS indicated that the environmental data and results from elemental analysis (Fig. S6) were the most interesting contributions of the manuscript.  Let's consider restructuring the text to emphasize these results.  
+
+Introduction needs to describe lack of in situ data on environmental conditions that are relevant for evaluating larval response to low pH conditions - it hints at this but should be elaborated.  Also emphasize that we do not have a consistent methodology for measuring larval response to low pH, i.e., we need a consistent methodology for measure dissolution.  This will setup the rest of the text to highlight our environmental results and how the method for measuring dissolution is novel and leads to more insight (e.g., elemental results).
+
+1) Figure: study sites map
+1) Dissolution results: need to combine old figures 2, 4, S1, S2 in a way to show what information is obtained with the new method, reviewers commented that the info provided by each figure was unclear
+1) Elemental mapping: old Figure S6 but need to present more clearly
+1) Environmental data: maps, PCA, gradients, by depth (old S3 but with clarity)
+1) Correlation matrices: environmental v biological data
+1) Regression plots: dissolution measures vs each other (e.g., how is external related to internal), dissolution measures vs environmental gradients
+1) Regression plots: dissolution vs carapace width
+
+Tables can also be provided to support regression results in the figures.
+
+## Figure 1
+
+<!-- [download](figs/statmap.jpg) -->

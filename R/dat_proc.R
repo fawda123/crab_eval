@@ -124,7 +124,8 @@ lengdat <- lengdatall %>%
   summarise(
     avelen = mean(lenval, na.rm = T),
     stelen = 1.96 * sd(lenval, na.rm = T)/(length(na.omit(lenval)))
-  )
+  ) %>% 
+  ungroup
 
 save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 
