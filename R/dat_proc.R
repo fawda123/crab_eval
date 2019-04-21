@@ -137,7 +137,7 @@ save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 CTD.df <- read.csv('data/raw/CTD_data.csv', stringsAsFactors = FALSE )
 
 envdatdelt <- crossing(
-  var = c('pH.TOT', 'Arag', 'CTD.T'),
+  var = c('pH.TOT', 'Arag', 'CTD.T', 'pCO2', 'CTD.O2'),
   depth = seq(10, 200, by = 10),
   Stn = unique(CTD.df$Sta[!is.na(CTD.df$Sta)])
 ) %>% 
@@ -148,7 +148,9 @@ envdatdelt <- crossing(
     var = case_when(
       var %in% 'Arag' ~ 'Aragonite',
       var %in% 'pH.TOT' ~ 'pH', 
-      var %in% 'CTD.T' ~ 'Temperature'
+      var %in% 'CTD.T' ~ 'Temperature', 
+      var %in% 'pCO2' ~ 'pCO2',
+      var %in% 'CTD.O2' ~ 'Oxygen'
     )
   ) %>% 
   ungroup %>% 
@@ -157,6 +159,36 @@ envdatdelt <- crossing(
   ) %>% 
   select(CTD, var, depth, val, delt) %>% 
   arrange(CTD, var, depth)
+
+# repeat but for flourescence in original envdat file
+data(envdat)
+
+envdatin <- envdat %>%
+  rename(
+    Sta = CTD,
+    Press = depth
+  )
+flodatdelt <- crossing(
+  var = c('Fluorescence'),
+  depth = seq(10, 200, by = 10),
+  Stn = unique(envdat$CTD)
+) %>% 
+  rowwise() %>% 
+  mutate(
+    val = calc.1.V(data.frame(Stn = Stn), envdatin, var, depth, 0, c(0, depth), depth)[[2]],
+    delt = calc.1.V(data.frame(Stn = Stn), envdatin, var, depth, 0, c(0, depth), depth)[[1]]
+  ) %>% 
+  ungroup %>% 
+  rename(
+    CTD = Stn
+  ) %>% 
+  select(CTD, var, depth, val, delt) %>% 
+  arrange(CTD, var, depth)
+
+# combine with envdatdalt
+envdatdelt <- envdatdelt %>% 
+  rbind(flodatdelt) %>% 
+  arrange(var, depth)
 
 save(envdatdelt, file = 'data/envdatdelt.RData', compress = 'xz')
 

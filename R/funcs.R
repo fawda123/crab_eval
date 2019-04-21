@@ -60,7 +60,7 @@ getsum <- function(x){
 # original script from data/raw/Dunge_crab_env.R
 calc.1.V <- function( data.df, CTD.df, V.name, Z.D, Z.0, Z.range, Z.layer ) {
   n.stn <- nrow( data.df )
-  
+
   V <- list( D.V = rep( NA, n.stn), V.mean = rep( NA, n.stn) )
   for( k.stn in 1:n.stn ) {
     indx.stn <- ( CTD.df$Sta == data.df$Stn[k.stn] )
