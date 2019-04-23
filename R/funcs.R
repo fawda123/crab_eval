@@ -20,7 +20,7 @@ p_ast <- function(x){
 
 # summary function for regression mods
 getsum <- function(x){
-  browser()
+  
   if(inherits(x, 'glm')){
     
     out <- data.frame(

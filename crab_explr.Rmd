@@ -29,14 +29,12 @@ source('R/funcs.R')
 data(crbs)
 data(dissdat)
 data(lengdat)
-data(envdat)
+data(envdatdelt)
 
 # rename some variables
-envdat <- envdat %>% 
-  rename(
-    pCO2_ave = pCO2, 
-    pCO2 = pCO2.at.this.depth.not.depth.averaged
-  )
+envdatdelt <- envdatdelt %>% 
+  dplyr::select(-delt) %>% 
+  spread(var, val)
 
 # exp vars to use in cor eval
 vars <- c('pH', 'Temperature', 'Oxygen', 'Fluorescence', 'pCO2', 'Aragonite')
@@ -101,6 +99,7 @@ crbs_eval <- reactive({
   return(out)
   
 })
+
 # data prep, nested for mods
 tocor <- reactive({
   
@@ -110,9 +109,9 @@ tocor <- reactive({
   crvrs <- input$crvrs
   crbs_eval <- crbs_eval()
 
-  out <- envdat %>% 
+  out <- envdatdelt %>% 
     filter(depth %in% c(dep1, dep2)) %>% 
-    left_join(crbs_eval, by = 'CTD') %>% 
+    left_join(crbs_eval, ., by = 'CTD') %>% 
     dplyr::select_(.dots = c('depth', 'abundances', 'length', 'dissolution', crvrs)) %>% 
     mutate(abundances = log(1 + abundances))
   
@@ -433,7 +432,7 @@ tomod <- reactive({
     )
   
   # join environmental and biological data
-  out <- envdat %>%
+  out <- envdatdelt %>%
     filter(depth %in% c(dep1, dep2)) %>%
     dplyr::select_(.dots = c('depth', 'CTD', crvrs)) %>% 
     left_join(crbs_eval, by = 'CTD') %>%

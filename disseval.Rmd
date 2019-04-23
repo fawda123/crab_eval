@@ -368,7 +368,7 @@ envdep <- reactive({
     gather('valtyp', 'val', val, delt) %>% 
     unite('var', var, valtyp, sep = '') %>% 
     mutate(var = gsub('val$', '', var)) %>% 
-    filter(var %in% c('Aragonite', 'Fluorescence', 'Temperature', 'pCO2', 'pH', 'pHdelt'))
+    filter(var %in% c('Aragonite', 'Fluorescence', 'Oxygen', 'Temperature', 'pCO2', 'pH'))
   
   return(out)
   
@@ -379,15 +379,15 @@ envdepvif <- reactive({
   
   # input
   envdep <- envdep()
-  
+
   # get vif values
   out <- envdep %>% 
     spread(var, val) %>% 
-    dplyr::select(Aragonite, Fluorescence, pCO2, pH, pHdelt, Temperature) %>% 
+    dplyr::select(Aragonite, Fluorescence, pCO2, Oxygen, pH, Temperature) %>% 
     nest %>% 
     mutate(
       vifchk = map(data, function(x){
-        
+
         # get vif values for each var against the others
         val <- NULL
         for(i in names(x)){
