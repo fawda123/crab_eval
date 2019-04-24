@@ -437,10 +437,10 @@ tomod <- reactive({
     dplyr::select_(.dots = c('depth', 'CTD', crvrs)) %>% 
     left_join(crbs_eval, by = 'CTD') %>%
     gather('var', 'val', -CTD, -abundances, -pa, -length, -dissolution, -depth) %>%
-    group_by(var) %>%
-    mutate(
-      val = scale(val)
-    ) %>%
+    # group_by(var) %>%
+    # mutate(
+    #   val = scale(val)
+    # ) %>%
     spread(var, val) %>%
     dplyr::select_(.dots = c('depth', 'abundances', 'pa', 'length', 'dissolution', crvrs)) %>%
     gather('res', 'val', abundances, pa, length, dissolution) %>%
@@ -583,7 +583,7 @@ mods <- reactive({
       select(model, df, loglik, aicc, delta, everything()) %>%
       select(-name) %>%
       gather('var', 'val', -model, -df, -loglik, -aicc, -delta) %>%
-      spread(var, val, fill = '-') %>%
+      spread(var, val, fill = NA) %>%
       mutate(
         aicc = round(aicc, 2),
         loglik = round(loglik, 2),
@@ -733,8 +733,9 @@ renderUI({
     select(-res) %>%
     unnest %>%
     mutate(depth = paste(depth, 'm'))
+  abutab[is.na(abutab)] <- '-'
 
-  cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+  cap.val<-paste0('Top five selected models for crab abundance at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
   HTML(knitr::kable(abutab, caption = cap.val, format = 'html') %>% 
@@ -757,8 +758,9 @@ renderUI({
     filter(res %in% 'pa') %>%
     select(-res) %>%
     unnest
-
-  cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '. All explanatory variables were scaled and centered.')
+  patab[is.na(patab)] <- '-'
+  
+  cap.val<-paste0('Top five selected models for crab presence/absence at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
   HTML(knitr::kable(patab, caption = cap.val, format = 'html')%>% 
@@ -781,8 +783,9 @@ renderUI({
     filter(res %in% 'length') %>%
     select(-res) %>%
     unnest
+  cltab[is.na(cltab)] <- '-'
 
-  cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
+  cap.val<-paste0('Top five selected models for crab carapace length at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
   HTML(knitr::kable(cltab, caption = cap.val, format = 'html') %>% 
@@ -805,8 +808,9 @@ renderUI({
     filter(res %in% 'dissolution') %>%
     select(-res) %>%
     unnest
-
-  cap.val<-paste0('Top five selected models for crab dissolution at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '.  All explanatory variables were scaled and centered.')
+  cltab[is.na(cltab)] <- '-'
+  
+  cap.val<-paste0('Top five selected models for crab dissolution at shallow and deep water. Input variables were ', paste(tolower(sort(crvrs)), collapse = ', '), '.')
   cap.val <- gsub('^(.*), (.*)$', '\\1, and \\2', cap.val)
 
   HTML(knitr::kable(cltab, caption = cap.val, format = 'html') %>% 

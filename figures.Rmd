@@ -9,6 +9,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/')
 
 library(tidyverse)
 library(patchwork)
+library(ggrepel)
 
 prj <- 4326 # wgs84
 
@@ -16,9 +17,11 @@ source('R/funcs.R')
 
 pbase <- theme_bw(base_size = 12, base_family = 'serif') + 
   theme(
-    axis.title = element_blank(), 
+    # axis.title = element_blank(), 
     strip.background = element_blank() 
   ) 
+
+data(dissdat)
 ```
 
 # Figures {.tabset}
@@ -42,3 +45,120 @@ Tables can also be provided to support regression results in the figures.
 ## Figure 1
 
 <!-- [download](figs/statmap.jpg) -->
+
+## Figure 2
+
+Separate:
+```{r, fig.height = 8, fig.width = 6}
+toplo1 <- dissdat %>% 
+  filter(!prt %in% 'body part') %>% 
+  spread(prt, disval) %>% 
+  mutate(
+    distyp = factor(distyp, 
+                    levels = c('diss_pore', 'diss_ridg', 'diss_crys'),
+                    labels = c('Pores', 'Ridges', 'Crystals')
+                    )
+  )
+
+p1 <- ggplot(toplo1, aes(y = internal, x = legs)) + 
+  geom_point() + 
+  facet_wrap(~distyp, ncol = 1) + 
+  ylab('Internal') + 
+  xlab('External (legs)') + 
+  geom_abline(slope = 1, intercept = 0) + 
+  pbase + 
+  # coord_equal() +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3) + 
+  ggtitle('(a)')
+
+toplo2 <- dissdat %>% 
+  filter(!prt %in% 'legs') %>% 
+  spread(prt, disval) %>% 
+  mutate(
+    distyp = factor(distyp, 
+                    levels = c('diss_pore', 'diss_ridg', 'diss_crys'),
+                    labels = c('Pores', 'Ridges', 'Crystals')
+                    )
+  )
+
+p2 <- ggplot(toplo2, aes(y = internal, x = `body part`)) + 
+  geom_point() + 
+  facet_wrap(~distyp, ncol = 1) + 
+  ylab('Internal') + 
+  xlab('External (body part)') + 
+  geom_abline(slope = 1, intercept = 0) + 
+  pbase + 
+  # coord_equal() +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3) +
+  ggtitle('(b)')
+
+p1 + p2 + plot_layout(ncol = 2)
+```
+
+Dissolution type averaged:
+```{r, fig.height = 3, fig.width = 6}
+toplo1 <- dissdat %>% 
+  group_by(CTD, prt) %>% 
+  summarise(disval = mean(disval,  na.rm = T)) %>% 
+  ungroup %>% 
+  filter(!prt %in% 'body part') %>% 
+  spread(prt, disval) 
+
+p1 <- ggplot(toplo1, aes(y = internal, x = legs)) + 
+  geom_point() + 
+  ylab('Internal') + 
+  xlab('External (legs)') + 
+  geom_abline(slope = 1, intercept = 0) + 
+  pbase + 
+  # coord_equal() +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3) + 
+  ggtitle('(a)')
+
+toplo2 <- dissdat %>% 
+  group_by(CTD, prt) %>% 
+  summarise(disval = mean(disval,  na.rm = T)) %>% 
+  ungroup %>% 
+  filter(!prt %in% 'legs') %>% 
+  spread(prt, disval)
+
+p2 <- ggplot(toplo2, aes(y = internal, x = `body part`)) + 
+  geom_point() + 
+  ylab('Internal') + 
+  xlab('External (body part)') + 
+  geom_abline(slope = 1, intercept = 0) + 
+  pbase + 
+  # coord_equal() +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3) +
+  ggtitle('(b)')
+
+p1 + p2 + plot_layout(ncol = 2)
+```
+
+Dissolution type averaged, external type averaged:
+```{r, fig.height = 3, fig.width = 3}
+toplo <- dissdat %>% 
+  group_by(CTD, prt) %>% 
+  summarise(disval = mean(disval,  na.rm = T)) %>% 
+  ungroup %>% 
+  spread(prt, disval) %>% 
+  mutate(
+    external = (`body part` + legs) / 2
+  ) %>% 
+  select(CTD, internal, external)
+
+p1 <- ggplot(toplo, aes(y = internal, x = external)) + 
+  geom_point() + 
+  ylab('Internal') + 
+  xlab('External') + 
+  geom_abline(slope = 1, intercept = 0) + 
+  pbase + 
+  # coord_equal() +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3)
+p1
+
+```
