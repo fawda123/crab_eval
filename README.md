@@ -1,6 +1,6 @@
 # README
 
-View results for `crab_explr.Rmd` [here](https://sccwrp.shinyapps.io/crab_eval/crab_explr.Rmd), `disseval.Rmd` [here](https://sccwrp.shinyapps.io/crab_eval/disseval.Rmd)
+View results for `crab_explr.Rmd` [here](https://sccwrp.shinyapps.io/crab_eval/crab_explr.Rmd), `disseval.Rmd` [here](https://sccwrp.shinyapps.io/crab_eval/disseval.Rmd), `figures.Rmd` [here](https://fawda123.github.io/crab_eval/figures.html)
 
 ## Data files
 
