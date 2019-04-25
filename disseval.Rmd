@@ -806,7 +806,7 @@ These plots show the relationship between dissolution and length for the selecte
 renderPlot({dislenplo()}, height = 300, width = 900)
 ```
 
-The table shows summary statistics for each linear model in the above plot.  The crab body location is where the dissolution was measured (plot facets) and the model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for length vs dissolution), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
+The table shows summary statistics for each linear model in the above plot.  The crab body location is where the dissolution was measured (plot facets) and the model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `intercept` (model intercept, can be in log-space), `intercept` (model intercept, can be in log-space), `slope` (slope estimate for length vs dissolution, can be in log-space), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
 ```{r}
 renderTable({dislenmod()}, digits = 3)
 ```
@@ -819,7 +819,7 @@ These plots show the relationship between dissolution and abundance for the sele
 renderPlot({disabuplo()}, height = 300, width = 900)
 ```
 
-The table shows summary statistics for each linear model in the above plot.  The crab body location is where the dissolution was measured (plot facets) and the model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for abundance vs dissolution), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
+The table shows summary statistics for each linear model in the above plot.  The crab body location is where the dissolution was measured (plot facets) and the model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `intercept` (model intercept, can be in log-space), `slope` (slope estimate for length vs dissolution, can be in log-space), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
 ```{r}
 renderTable({disabumod()}, digits = 3)
 ```
@@ -832,7 +832,7 @@ Each point is based on an crab counts and the corresponding lengths for the same
 renderPlot({lenabuplo()}, height = 300, width = 300)
 ```
 
-The table shows summary statistics for each linear model in the above plot.  The model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `slope` (slope estimate for abundance vs length), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
+The table shows summary statistics for each linear model in the above plot.  The model subset indicates the appropriate regression model in each plot facet.  The summary information are F-statistics (`F.stat`, whole model), p-value (`p.mod`, whole model), R-squared (`R2`), `intercept` (model intercept, can be in log-space), `slope` (slope estimate for length vs dissolution, can be in log-space), t-statistic (`t.stat`, test statistics for slope), and p-value (`p.slope`, significance of slope). ns: p >= 0.05, \* p < 0.05, ** p < 0.01
 ```{r}
 renderTable({lenabumod()}, digits = 3)
 ```
