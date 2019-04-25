@@ -5,11 +5,13 @@ output:
 ---
 
 ```{r message = F, warning = F, results = 'hide',echo=F}
-knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/')
+knitr::opts_chunk$set(echo = TRUE, warning = F, message = F, fig.path = 'figs/', dev.args = list(family = 'serif'))
 
 library(tidyverse)
 library(patchwork)
 library(ggrepel)
+library(vegan)
+library(ggord)
 
 prj <- 4326 # wgs84
 
@@ -22,6 +24,11 @@ pbase <- theme_bw(base_size = 12, base_family = 'serif') +
   ) 
 
 data(dissdat)
+data(crbs)
+data(lengdat)
+data(envdatdelt)
+data(shoreloc)
+data(crbs)
 ```
 
 # Figures {.tabset}
@@ -162,3 +169,58 @@ p1 <- ggplot(toplo, aes(y = internal, x = external)) +
 p1
 
 ```
+
+## Figure 3
+
+```{r, fig.height = 4, fig.width = 4}
+datbio<- dissdat %>% 
+  group_by(CTD, prt) %>% 
+  summarise(disval = mean(disval,  na.rm = T)) %>% 
+  ungroup %>% 
+  spread(prt, disval) %>% 
+  mutate(
+    external = (`body part` + legs) / 2
+  ) %>% 
+  select(CTD, internal, external)
+
+lengdatsub <- lengdat %>% 
+  filter(lenvar %in% 'CW')
+
+datbio <- datbio %>% 
+  left_join(lengdatsub, by = 'CTD') %>% 
+  select(CTD, external, avelen) %>% 
+  gather('var', 'val', external, avelen) %>% 
+  group_by(var) %>% 
+  mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
+  ungroup %>% 
+  spread(var, val) %>% 
+  arrange(CTD) %>% 
+  rename(
+    `Ext.diss` = external, 
+    `Carapace.width` = avelen
+  ) %>% 
+  data.frame(stringsAsFactors = F, check.names = F) %>% 
+  remove_rownames %>% 
+  column_to_rownames('CTD')
+
+datenv <- envdatdelt %>% 
+  filter(var %in% c('pH', 'Oxygen', 'Temperature','Fluorescence')) %>% 
+  filter(depth %in% 100) %>% 
+  select(-delt, depth) %>% 
+  filter(CTD %in% row.names(datbio)) %>% 
+  complete(CTD, var) %>% 
+  group_by(var) %>% 
+  mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
+  ungroup %>% 
+  spread(var, val) %>% 
+  arrange(CTD) %>% 
+  data.frame(stringsAsFactors = F) %>% 
+  remove_rownames %>% 
+  column_to_rownames('CTD')
+
+ord <- rda(datbio, datenv, scale = T)
+ggord(ord, axes = c('1', '2'), vec_ext = 2, ptslab = T, parse = T, obslab = T, labcol = 'tomato1', repel = T, coord_fix = F, addsize = 3) + 
+  theme_bw(base_family = 'serif') 
+summary(ord)
+```
+
