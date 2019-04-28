@@ -12,6 +12,9 @@ library(patchwork)
 library(ggrepel)
 library(vegan)
 library(ggord)
+library(grid)
+library(gridExtra)
+library(scales)
 
 prj <- 4326 # wgs84
 
@@ -28,7 +31,6 @@ data(crbs)
 data(lengdat)
 data(envdatdelt)
 data(shoreloc)
-data(crbs)
 ```
 
 # Figures {.tabset}
@@ -42,6 +44,7 @@ Introduction needs to describe lack of in situ data on environmental conditions 
 1) Figure: study sites map
 1) Dissolution results: need to combine old figures 2, 4, S1, S2 in a way to show what information is obtained with the new method, reviewers commented that the info provided by each figure was unclear
 1) Elemental mapping: old Figure S6 but need to present more clearly
+1) Exploratory RDA plot for bio response and environmental variables
 1) Environmental data: maps, PCA, gradients, by depth (old S3 but with clarity)
 1) Correlation matrices: environmental v biological data
 1) Regression plots: dissolution measures vs each other (e.g., how is external related to internal), dissolution measures vs environmental gradients
@@ -172,9 +175,12 @@ p1
 
 ## Figure 3
 
+## Figure 4
+
 ```{r, fig.height = 4, fig.width = 4}
 datbio<- dissdat %>% 
-  group_by(CTD, prt) %>% 
+  group_by(CTD, prt) %>%
+  filter(!distyp %in% 'diss_pore') %>% 
   summarise(disval = mean(disval,  na.rm = T)) %>% 
   ungroup %>% 
   spread(prt, disval) %>% 
@@ -188,14 +194,16 @@ lengdatsub <- lengdat %>%
 
 datbio <- datbio %>% 
   left_join(lengdatsub, by = 'CTD') %>% 
-  select(CTD, external, avelen) %>% 
-  gather('var', 'val', external, avelen) %>% 
+  select(CTD, internal, external, avelen) %>% 
+  gather('var', 'val', internal, external, avelen) %>% 
   group_by(var) %>% 
   mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
   ungroup %>% 
   spread(var, val) %>% 
   arrange(CTD) %>% 
+  # filter(!CTD %in% 109) %>% 
   rename(
+    `Int.diss` = internal,
     `Ext.diss` = external, 
     `Carapace.width` = avelen
   ) %>% 
@@ -213,14 +221,224 @@ datenv <- envdatdelt %>%
   mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
   ungroup %>% 
   spread(var, val) %>% 
+  # filter(!CTD %in% 109) %>% 
   arrange(CTD) %>% 
   data.frame(stringsAsFactors = F) %>% 
   remove_rownames %>% 
   column_to_rownames('CTD')
 
 ord <- rda(datbio, datenv, scale = T)
-ggord(ord, axes = c('1', '2'), vec_ext = 2, ptslab = T, parse = T, obslab = T, labcol = 'tomato1', repel = T, coord_fix = F, addsize = 3) + 
+ggord(ord, axes = c('1', '2'), vec_ext = 1, ptslab = T, parse = T, obslab = T, labcol = 'tomato1', repel = T, coord_fix = F, addsize = 3) + 
   theme_bw(base_family = 'serif') 
 summary(ord)
+```
+
+## Figure 5
+
+```{r, fig.height = 4.5, fig.width = 9}
+datbio<- dissdat %>% 
+  filter(distyp %in% 'diss_crys') %>%
+  filter(prt %in% c('body part', 'internal')) %>%
+  filter(!CTD %in% c(109)) %>% 
+  spread(prt, disval) %>% 
+  # mutate(
+  #   external = (`body part` + legs) / 2
+  # ) %>% 
+  rename(external = `body part`) %>% 
+  select(CTD, internal, external)
+
+lengdatsub <- lengdat %>% 
+  filter(lenvar %in% 'CW')
+
+datbio <- datbio %>% 
+  left_join(lengdatsub, by = 'CTD') %>% 
+  left_join(crbs, by = 'CTD') %>% 
+  select(CTD, internal, external, avelen, abundances) %>% 
+  rename(
+    `Ext.diss` = external,
+    `Int.diss` = internal, 
+    `Abundances` = abundances,
+    `Carapace.width` = avelen
+  ) %>% 
+  mutate(Abundances = log10(1 + Abundances))
+
+pbase <- theme(
+  panel.grid.major = element_blank(), 
+  panel.grid.minor = element_blank(), 
+  axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 8), 
+  axis.text.y = element_text(size = 8),
+  legend.position = c(0.5, 1.12),
+  legend.direction = 'horizontal',
+  plot.margin = unit(c(4,4,0,0), "lines"),
+  strip.background = element_blank(), 
+  strip.text.y = element_text(angle = 0, hjust = 0, vjust = 0.5), 
+  panel.background = element_rect(fill = 'black')
+  ) 
+
+outlab <- data.frame(
+  y = c(2.5, 6.5), 
+  lab = c('Environment', 'Biology')
+)
+
+##
+# p1 
+
+datenv <- envdatdelt %>% 
+  filter(var %in% c('pH', 'Oxygen', 'Temperature','Fluorescence')) %>% 
+  filter(depth %in% 50) %>% 
+  select(-delt, -depth) %>% 
+  filter(CTD %in% datbio$CTD) %>% 
+  complete(CTD, var) %>% 
+  group_by(var) %>% 
+  mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
+  ungroup %>% 
+  spread(var, val)
+
+dat_cor <- datbio %>% 
+  inner_join(datenv, by = 'CTD') %>% 
+  select(-CTD)
+
+crs <- crossing(var1 = names(dat_cor), var2 = names(dat_cor)) %>% 
+  filter(var1 != var2) %>% 
+  rownames_to_column() %>% 
+  group_by(rowname) %>% 
+  nest %>% 
+  mutate(
+    crs = map(data, function(x){
+      
+      # variables
+      vr1 <- dat_cor[[x$var1]]
+      vr2 <- dat_cor[[x$var2]]
+      
+      # pearson
+      pr_ts <- cor.test(vr1, vr2, method = 'pearson')
+      pr_cr <- round(pr_ts$estimate, 2)
+      pr_pv <- p_ast(pr_ts$p.value)
+      pr <- paste(pr_cr, pr_pv)
+    
+      out <- data.frame(pr = pr, stringsAsFactors = F)
+      return(out)
+      
+    })
+  ) %>% 
+  unnest %>% 
+  select(-rowname)
+
+levs <- names(dat_cor)
+labs <- levs
+prplo <- crs %>% 
+  separate(pr, c('cor', 'sig'), sep = ' ') %>% 
+  filter(var1 %in% levs & var2 %in% levs) %>%  
+  mutate(
+    cor = as.numeric(cor), 
+    var1 = factor(var1, levels = rev(levs), labels = rev(labs)), 
+    var2 = factor(var2, levels = rev(levs), labels = rev(labs)), 
+    sig = gsub('ns', '', sig)
+  )
+
+p1 <- ggplot(prplo) + 
+  geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
+  # geom_text(aes(y = var1, x = var2, label = sig)) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.6)),
+                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 8.75, xmax = 8.75) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.6)),
+                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 8.75, xmax = 8.75) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.6)),
+                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 8.75, ymax = 8.75) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.6)),
+                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 8.75, ymax = 8.75) +
+  pbase +
+  scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
+  scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+  scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("green"), midpoint = 0, limits = c(-1, 1)) +
+  guides(fill = guide_colourbar(barheight = 0.5, barwidth = 5, label.theme = element_text(size = 6, angle = 0))) +
+  geom_hline(yintercept = 4.5, size = 1.5) +
+  geom_vline(xintercept = 4.5, size = 1.5) 
+
+##
+# p2
+
+datenv <- envdatdelt %>% 
+  filter(var %in% c('pH', 'Oxygen', 'Temperature','Fluorescence')) %>% 
+  filter(depth %in% 100) %>% 
+  select(-delt, -depth) %>% 
+  filter(CTD %in% datbio$CTD) %>% 
+  complete(CTD, var) %>% 
+  group_by(var) %>% 
+  mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
+  ungroup %>% 
+  spread(var, val)
+
+dat_cor <- datbio %>% 
+  inner_join(datenv, by = 'CTD') %>% 
+  select(-CTD)
+
+crs <- crossing(var1 = names(dat_cor), var2 = names(dat_cor)) %>% 
+  filter(var1 != var2) %>% 
+  rownames_to_column() %>% 
+  group_by(rowname) %>% 
+  nest %>% 
+  mutate(
+    crs = map(data, function(x){
+      
+      # variables
+      vr1 <- dat_cor[[x$var1]]
+      vr2 <- dat_cor[[x$var2]]
+      
+      # pearson
+      pr_ts <- cor.test(vr1, vr2, method = 'pearson')
+      pr_cr <- round(pr_ts$estimate, 2)
+      pr_pv <- p_ast(pr_ts$p.value)
+      pr <- paste(pr_cr, pr_pv)
+    
+      out <- data.frame(pr = pr, stringsAsFactors = F)
+      return(out)
+      
+    })
+  ) %>% 
+  unnest %>% 
+  select(-rowname)
+
+levs <- names(dat_cor)
+labs <- levs
+prplo <- crs %>% 
+  separate(pr, c('cor', 'sig'), sep = ' ') %>% 
+  filter(var1 %in% levs & var2 %in% levs) %>%  
+  mutate(
+    cor = as.numeric(cor), 
+    var1 = factor(var1, levels = rev(levs), labels = rev(labs)), 
+    var2 = factor(var2, levels = rev(levs), labels = rev(labs)), 
+    sig = gsub('ns', '', sig)
+  )
+
+p2 <- ggplot(prplo) + 
+  geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
+  # geom_text(aes(y = var1, x = var2, label = sig)) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.6)),
+                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 8.75, xmax = 8.75) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.6)),
+                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 8.75, xmax = 8.75) +
+  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.6)),
+                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 8.75, ymax = 8.75) +
+  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.6)),
+                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 8.75, ymax = 8.75) +
+  pbase +
+  scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
+  scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
+  scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("green"), midpoint = 0, limits = c(-1, 1)) +
+  guides(fill = guide_colourbar(barheight = 0.5, barwidth = 5, label.theme = element_text(size = 6, angle = 0))) +
+  geom_hline(yintercept = 4.5, size = 1.5) +
+  geom_vline(xintercept = 4.5, size = 1.5)
+
+# Code to override clipping
+gt1 <- ggplot_gtable(ggplot_build(p1))
+gt1$layout$clip[gt1$layout$name == "panel"] <- "off"
+gt2 <- ggplot_gtable(ggplot_build(p2))
+gt2$layout$clip[gt2$layout$name == "panel"] <- "off"
+grid.arrange(
+  arrangeGrob(textGrob('(a) 20 m'), gt1, ncol = 1, heights = c(0.05, 1)), 
+  arrangeGrob(textGrob('(b) 100 m'), gt2, ncol = 1, heights = c(0.05, 1)), 
+  ncol = 2
+)
 ```
 
