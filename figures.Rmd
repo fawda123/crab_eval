@@ -31,9 +31,17 @@ data(crbs)
 data(lengdat)
 data(envdatdelt)
 data(shoreloc)
+
+# get all values and only ph delt
+envdatdelt <- envdatdelt %>% 
+  gather('envtyp', 'envval', val, delt) %>% 
+  unite('var', var, envtyp, sep = '') %>% 
+  filter(grepl('val$|^pHdelt$', var)) %>% 
+  mutate(var = gsub('\\val$', '', var)) %>% 
+  rename(val = envval)
 ```
 
-# Figures {.tabset}
+# Figures and tables {.tabset}
 
 ## Layout
 
@@ -51,6 +59,13 @@ Introduction needs to describe lack of in situ data on environmental conditions 
 1) Regression plots: dissolution vs carapace width
 
 Tables can also be provided to support regression results in the figures.
+
+
+## Table 1
+
+```{r}
+
+```
 
 ## Figure 1
 
@@ -184,8 +199,9 @@ datbio<- dissdat %>%
   summarise(disval = mean(disval,  na.rm = T)) %>% 
   ungroup %>% 
   spread(prt, disval) %>% 
+  dplyr::select(-legs) %>% 
   mutate(
-    external = (`body part` + legs) / 2
+    external = `body part`#(`body part` + legs) / 2
   ) %>% 
   select(CTD, internal, external)
 
@@ -211,10 +227,9 @@ datbio <- datbio %>%
   remove_rownames %>% 
   column_to_rownames('CTD')
 
-datenv <- envdatdelt %>% 
-  filter(var %in% c('pH', 'Oxygen', 'Temperature','Fluorescence')) %>% 
+datenv <- envdatdelt %>%
+  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Fluorescence')) %>% 
   filter(depth %in% 100) %>% 
-  select(-delt, depth) %>% 
   filter(CTD %in% row.names(datbio)) %>% 
   complete(CTD, var) %>% 
   group_by(var) %>% 
@@ -284,9 +299,9 @@ outlab <- data.frame(
 # p1 
 
 datenv <- envdatdelt %>% 
-  filter(var %in% c('pH', 'Oxygen', 'Temperature','Fluorescence')) %>% 
+  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Fluorescence')) %>% 
   filter(depth %in% 50) %>% 
-  select(-delt, -depth) %>% 
+  select(-depth) %>% 
   filter(CTD %in% datbio$CTD) %>% 
   complete(CTD, var) %>% 
   group_by(var) %>% 
@@ -340,28 +355,28 @@ p1 <- ggplot(prplo) +
   geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
   # geom_text(aes(y = var1, x = var2, label = sig)) +
   annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.6)),
-                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 8.75, xmax = 8.75) +
+                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 9.75, xmax = 9.75) +
   annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.6)),
-                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 8.75, xmax = 8.75) +
+                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 9.75, xmax = 9.75) +
   annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.6)),
-                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 8.75, ymax = 8.75) +
+                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 9.75, ymax = 9.75) +
   annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.6)),
-                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 8.75, ymax = 8.75) +
+                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 9.75, ymax = 9.75) +
   pbase +
   scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
   scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
   scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("green"), midpoint = 0, limits = c(-1, 1)) +
   guides(fill = guide_colourbar(barheight = 0.5, barwidth = 5, label.theme = element_text(size = 6, angle = 0))) +
-  geom_hline(yintercept = 4.5, size = 1.5) +
-  geom_vline(xintercept = 4.5, size = 1.5) 
+  geom_hline(yintercept = 5.5, size = 1.5) +
+  geom_vline(xintercept = 5.5, size = 1.5) 
 
 ##
 # p2
 
 datenv <- envdatdelt %>% 
-  filter(var %in% c('pH', 'Oxygen', 'Temperature','Fluorescence')) %>% 
+  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Fluorescence')) %>% 
   filter(depth %in% 100) %>% 
-  select(-delt, -depth) %>% 
+  select(-depth) %>% 
   filter(CTD %in% datbio$CTD) %>% 
   complete(CTD, var) %>% 
   group_by(var) %>% 
@@ -415,20 +430,20 @@ p2 <- ggplot(prplo) +
   geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
   # geom_text(aes(y = var1, x = var2, label = sig)) +
   annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.6)),
-                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 8.75, xmax = 8.75) +
+                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 9.75, xmax = 9.75) +
   annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.6)),
-                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 8.75, xmax = 8.75) +
+                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 9.75, xmax = 9.75) +
   annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.6)),
-                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 8.75, ymax = 8.75) +
+                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 9.75, ymax = 9.75) +
   annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.6)),
-                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 8.75, ymax = 8.75) +
+                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 9.75, ymax = 9.75) +
   pbase +
   scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
   scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
   scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("green"), midpoint = 0, limits = c(-1, 1)) +
   guides(fill = guide_colourbar(barheight = 0.5, barwidth = 5, label.theme = element_text(size = 6, angle = 0))) +
-  geom_hline(yintercept = 4.5, size = 1.5) +
-  geom_vline(xintercept = 4.5, size = 1.5)
+  geom_hline(yintercept = 5.5, size = 1.5) +
+  geom_vline(xintercept = 5.5, size = 1.5)
 
 # Code to override clipping
 gt1 <- ggplot_gtable(ggplot_build(p1))

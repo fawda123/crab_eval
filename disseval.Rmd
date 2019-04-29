@@ -30,6 +30,14 @@ data(crbs)
 abudat <- crbs %>% 
   select(CTD, abundances) %>% 
   na.omit
+
+# get all values and only ph delt
+envdatdelt <- envdatdelt %>% 
+  gather('envtyp', 'envval', val, delt) %>% 
+  unite('var', var, envtyp, sep = '') %>% 
+  filter(grepl('val$|^pHdelt$', var)) %>% 
+  mutate(var = gsub('\\val$', '', var)) %>% 
+  rename(val = envval)
 ```
 
 ```{r selectors}
@@ -365,10 +373,7 @@ envdep <- reactive({
   out <- envdatdelt %>% 
     filter(depth %in% dep) %>% 
     select(-depth) %>% 
-    gather('valtyp', 'val', val, delt) %>% 
-    unite('var', var, valtyp, sep = '') %>% 
-    mutate(var = gsub('val$', '', var)) %>% 
-    filter(var %in% c('Aragonite', 'Fluorescence', 'Oxygen', 'Temperature', 'pCO2', 'pH'))
+    filter(var %in% c('Aragonite', 'Fluorescence', 'Oxygen', 'Temperature', 'pCO2', 'pH', 'pHdelt'))
   
   return(out)
   

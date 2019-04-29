@@ -31,13 +31,17 @@ data(dissdat)
 data(lengdat)
 data(envdatdelt)
 
-# rename some variables
+# get all values and only ph delt
 envdatdelt <- envdatdelt %>% 
-  dplyr::select(-delt) %>% 
+  gather('envtyp', 'envval', val, delt) %>% 
+  unite('var', var, envtyp, sep = '') %>% 
+  filter(grepl('val$|^pHdelt$', var)) %>% 
+  mutate(var = gsub('\\val$', '', var)) %>% 
+  rename(val = envval) %>% 
   spread(var, val)
 
 # exp vars to use in cor eval
-vars <- c('pH', 'Temperature', 'Oxygen', 'Fluorescence', 'pCO2', 'Aragonite')
+vars <- c('pH', 'pHdelt', 'Temperature', 'Oxygen', 'Fluorescence')
 ```
 
 # {.tabset}
