@@ -48,11 +48,6 @@ column(4,
        
        ),
 column(4, 
-       
-       selectInput('dss', 'Select dissolution measure:', choices = unique(dissdat$distyp))
-       
-       ), 
-column(4, 
       selectInput('logm', 'Log models (abundance only):', choices = c(TRUE, FALSE))
 )
 )
@@ -64,11 +59,9 @@ dislendat <- reactive({
   
   # input
   lng <- input$lng
-  dss <- input$dss
   
   out <- inner_join(lengdat, dissdat, by = 'CTD') %>% 
-    filter(lenvar %in% lng) %>% 
-    filter(distyp %in% dss) 
+    filter(lenvar %in% lng)
 
   return(out)
   
@@ -158,7 +151,6 @@ dislenplo <- reactive({
 disabudat <- reactive({
   
   # input
-  dss <- input$dss
   loc <- input$loc
   
   abudat <- crbs %>% 
@@ -166,8 +158,7 @@ disabudat <- reactive({
     na.omit
 
   out <- inner_join(abudat, dissdat, by = 'CTD') %>% 
-    left_join(shoreloc, by = 'CTD') %>% 
-    filter(distyp %in% dss) 
+    left_join(shoreloc, by = 'CTD')
   return(out)
   
 })
@@ -435,10 +426,8 @@ disenvdat <- reactive({
   
   # input
   envdep <- envdep()
-  dss <- input$dss
 
   out <- inner_join(envdep, dissdat, by = 'CTD') %>% 
-    filter(distyp %in% dss) %>% 
     left_join(shoreloc, by = 'CTD')
 
   return(out)

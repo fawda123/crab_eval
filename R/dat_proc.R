@@ -101,6 +101,14 @@ dissdat <- dissdat %>%
   mutate_if(!names(.) %in% 'prt', as.numeric) %>% 
   gather('distyp', 'disval', -CTD, -prt)
 
+# combine dissolution measures 
+# average ridges, crystals for body part legs
+# average ridges, crystals, pore for internal
+dissdat <- dissdat %>% 
+  filter(!(prt %in% c('body part', 'legs') & distyp %in% 'diss_pore')) %>% 
+  group_by(CTD, prt) %>% 
+  summarise(disval = mean(disval, na.rm = T))
+  
 save(dissdat, file = 'data/dissdat.RData', compress = 'xz')
 
 ##

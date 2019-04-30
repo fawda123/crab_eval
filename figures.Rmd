@@ -63,8 +63,44 @@ Tables can also be provided to support regression results in the figures.
 
 ## Table 1
 
+Summary of environmental data at 50 m for sites that are onshore (less than 200 m depth) and those that are offshore (greater than 200 m depth).  
 ```{r}
+totab <- envdatdelt %>% 
+  filter(CTD %in% dissdat$CTD) %>% 
+  filter(depth %in% 50) %>% 
+  left_join(shoreloc, by = 'CTD') %>% 
+  select(-depth) %>% 
+  group_by(var, shoreloc) %>% 
+  summarise(
+    avev = mean(val, na.rm = T), 
+    medv = median(val, na.rm = T), 
+    minv = min(val, na.rm = T), 
+    maxv = max(val, na.rm = T)
+  ) %>% 
+  ungroup %>% 
+  gather('varv', 'valv', -var, -shoreloc) %>% 
+  mutate(
+    valv = ifelse(var %in% c('Oxygen', 'Temperature', 'pCO2'), round(valv, 1), round(valv, 2)),
+    valv = as.character(valv)
+  ) %>% 
+  spread(varv, valv) %>% 
+  arrange(desc(shoreloc), var) %>% 
+  mutate(
+    shoreloc = factor(shoreloc, levels = c('onshore', 'offshore'), labels = c('Onshore', 'Offshore')),
+    shoreloc = as.character(shoreloc),
+    shoreloc = ifelse(duplicated(shoreloc), '', shoreloc)
+  ) %>% 
+  dplyr::select(shoreloc, var, avev, medv, minv, maxv) %>% 
+  rename(
+    Location = shoreloc,
+    Parameter = var,
+    Average = avev,
+    Median = medv,
+    Minimum = minv,
+    Maximum = maxv
+  )
 
+knitr::kable(totab)
 ```
 
 ## Figure 1
@@ -73,61 +109,9 @@ Tables can also be provided to support regression results in the figures.
 
 ## Figure 2
 
-Separate:
-```{r, fig.height = 8, fig.width = 6}
-toplo1 <- dissdat %>% 
-  filter(!prt %in% 'body part') %>% 
-  spread(prt, disval) %>% 
-  mutate(
-    distyp = factor(distyp, 
-                    levels = c('diss_pore', 'diss_ridg', 'diss_crys'),
-                    labels = c('Pores', 'Ridges', 'Crystals')
-                    )
-  )
-
-p1 <- ggplot(toplo1, aes(y = internal, x = legs)) + 
-  geom_point() + 
-  facet_wrap(~distyp, ncol = 1) + 
-  ylab('Internal') + 
-  xlab('External (legs)') + 
-  geom_abline(slope = 1, intercept = 0) + 
-  pbase + 
-  # coord_equal() +
-  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
-  geom_text_repel(aes(label = CTD), size = 3) + 
-  ggtitle('(a)')
-
-toplo2 <- dissdat %>% 
-  filter(!prt %in% 'legs') %>% 
-  spread(prt, disval) %>% 
-  mutate(
-    distyp = factor(distyp, 
-                    levels = c('diss_pore', 'diss_ridg', 'diss_crys'),
-                    labels = c('Pores', 'Ridges', 'Crystals')
-                    )
-  )
-
-p2 <- ggplot(toplo2, aes(y = internal, x = `body part`)) + 
-  geom_point() + 
-  facet_wrap(~distyp, ncol = 1) + 
-  ylab('Internal') + 
-  xlab('External (body part)') + 
-  geom_abline(slope = 1, intercept = 0) + 
-  pbase + 
-  # coord_equal() +
-  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
-  geom_text_repel(aes(label = CTD), size = 3) +
-  ggtitle('(b)')
-
-p1 + p2 + plot_layout(ncol = 2)
-```
-
 Dissolution type averaged:
 ```{r, fig.height = 3, fig.width = 6}
 toplo1 <- dissdat %>% 
-  group_by(CTD, prt) %>% 
-  summarise(disval = mean(disval,  na.rm = T)) %>% 
-  ungroup %>% 
   filter(!prt %in% 'body part') %>% 
   spread(prt, disval) 
 
@@ -143,9 +127,6 @@ p1 <- ggplot(toplo1, aes(y = internal, x = legs)) +
   ggtitle('(a)')
 
 toplo2 <- dissdat %>% 
-  group_by(CTD, prt) %>% 
-  summarise(disval = mean(disval,  na.rm = T)) %>% 
-  ungroup %>% 
   filter(!prt %in% 'legs') %>% 
   spread(prt, disval)
 
@@ -166,12 +147,9 @@ p1 + p2 + plot_layout(ncol = 2)
 Dissolution type averaged, external type averaged:
 ```{r, fig.height = 3, fig.width = 3}
 toplo <- dissdat %>% 
-  group_by(CTD, prt) %>% 
-  summarise(disval = mean(disval,  na.rm = T)) %>% 
-  ungroup %>% 
   spread(prt, disval) %>% 
   mutate(
-    external = (`body part` + legs) / 2
+    external = `body part` + legs 
   ) %>% 
   select(CTD, internal, external)
 
@@ -194,14 +172,10 @@ p1
 
 ```{r, fig.height = 4, fig.width = 4}
 datbio<- dissdat %>% 
-  group_by(CTD, prt) %>%
-  filter(!distyp %in% 'diss_pore') %>% 
-  summarise(disval = mean(disval,  na.rm = T)) %>% 
-  ungroup %>% 
+  # filter(!CTD %in% c(109)) %>%
   spread(prt, disval) %>% 
-  dplyr::select(-legs) %>% 
   mutate(
-    external = `body part`#(`body part` + legs) / 2
+    external = `body part` + legs
   ) %>% 
   select(CTD, internal, external)
 
@@ -252,14 +226,11 @@ summary(ord)
 
 ```{r, fig.height = 4.5, fig.width = 9}
 datbio<- dissdat %>% 
-  filter(distyp %in% 'diss_crys') %>%
-  filter(prt %in% c('body part', 'internal')) %>%
   filter(!CTD %in% c(109)) %>% 
   spread(prt, disval) %>% 
-  # mutate(
-  #   external = (`body part` + legs) / 2
-  # ) %>% 
-  rename(external = `body part`) %>% 
+  mutate(
+    external = `body part` + legs
+  ) %>% 
   select(CTD, internal, external)
 
 lengdatsub <- lengdat %>% 

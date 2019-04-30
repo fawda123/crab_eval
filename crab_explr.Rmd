@@ -63,9 +63,6 @@ column(12,
   column(4, 
     selectInput('lng', 'Select length measure:', choices = unique(lengdat$lenvar))
   ),
-column(4, 
-    selectInput('dss', 'Select dissolution measure:', choices = unique(dissdat$distyp))
-  ),
   column(4, 
     selectInput('dssloc', 'Select dissolution location:', choices = unique(dissdat$prt))
   )  
@@ -78,7 +75,6 @@ crbs_eval <- reactive({
   
   # inputs
   lng <- input$lng
-  dss <- input$dss
   dssloc <- input$dssloc
   
   # crbs, select only abundance, p/a
@@ -91,7 +87,6 @@ crbs_eval <- reactive({
     select(CTD, avelen) %>% 
     rename(length = avelen)
   dissdatsel <- dissdat %>% 
-    filter(distyp %in% dss) %>% 
     filter(prt %in% dssloc) %>% 
     select(CTD, disval) %>% 
     rename(dissolution = disval)
