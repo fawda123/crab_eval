@@ -43,9 +43,7 @@ envdatdelt <- envdatdelt %>%
 ```{r selectors}
 column(12,
 column(4, 
-       
        selectInput('lng', 'Select length measure:', choices = unique(lengdat$lenvar))
-       
        ),
 column(4, 
       selectInput('logm', 'Log models (abundance only):', choices = c(TRUE, FALSE))
@@ -179,7 +177,7 @@ disabumod <- reactive({
       mod = map(data, function(x){
         
         if(logm)
-          modout <- lm(log10(abundances) ~ disval, data = x)
+          modout <- lm(log10(1 + abundances) ~ disval, data = x)
         else 
           modout <- lm(abundances ~ disval, data = x)
         
@@ -198,7 +196,7 @@ disabumod <- reactive({
       mod = map(data, function(x){
         
         if(logm)
-          modout <- lm(log10(abundances) ~ disval, data = x)
+          modout <- lm(log10(1 + abundances) ~ disval, data = x)
         else 
           modout <- lm(abundances ~ disval, data = x)
         
@@ -231,24 +229,39 @@ disabuplo <- reactive({
   logm <- input$logm
   
   # plot
-  p <- ggplot(disabudat, aes(x = disval, y = abundances)) +
-    geom_point(aes(color = shoreloc), size = 4) + 
-    facet_grid(~prt) + 
-    geom_smooth(method = 'lm', colour = 'black', se = F) + 
-    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
-    theme_bw(base_family = 'serif', base_size = 16) +
-    theme(
-      legend.title = element_blank(),
-      strip.background = element_blank(),
-      legend.position = 'top'
-      ) +
-    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
-    ylab('Counts') + 
-    xlab('Dissolution') +
-    scale_linetype_manual(values = c(0, 2))
-  
-  if(logm)
-    p <- p + scale_y_log10('log-Counts')
+  if(!as.logical(logm)){
+    p <- ggplot(disabudat, aes(x = disval, y = abundances)) +
+      geom_point(aes(color = shoreloc), size = 4) + 
+      facet_grid(~prt) + 
+      geom_smooth(method = 'lm', colour = 'black', se = F) + 
+      geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+      theme_bw(base_family = 'serif', base_size = 16) +
+      theme(
+        legend.title = element_blank(),
+        strip.background = element_blank(),
+        legend.position = 'top'
+        ) +
+      scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+      ylab('Counts') + 
+      xlab('Dissolution') +
+      scale_linetype_manual(values = c(0, 2))
+  } else {
+    p <- ggplot(disabudat, aes(x = disval, y = log10(1 + abundances))) +
+      geom_point(aes(color = shoreloc), size = 4) + 
+      facet_grid(~prt) + 
+      geom_smooth(method = 'lm', colour = 'black', se = F) + 
+      geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+      theme_bw(base_family = 'serif', base_size = 16) +
+      theme(
+        legend.title = element_blank(),
+        strip.background = element_blank(),
+        legend.position = 'top'
+        ) +
+      scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+      ylab('log-Counts') + 
+      xlab('Dissolution') +
+      scale_linetype_manual(values = c(0, 2))
+  }
   
   return(p)
 })
@@ -282,7 +295,7 @@ lenabumod <- reactive({
       mod = map(data, function(x){
         
         if(logm)
-          modout <- lm(log10(abundances) ~ avelen, data = x)
+          modout <- lm(log10(1 + abundances) ~ avelen, data = x)
         else 
           modout <- lm(abundances ~ avelen, data = x)
         
@@ -300,7 +313,7 @@ lenabumod <- reactive({
       mod = map(data, function(x){
         
         if(logm)
-          modout <- lm(log10(abundances) ~ avelen, data = x)
+          modout <- lm(log10(1 + abundances) ~ avelen, data = x)
         else 
           modout <- lm(abundances ~ avelen, data = x)
         
@@ -332,24 +345,39 @@ lenabuplo <- reactive({
   logm <- input$logm
   
   # plot
-  p <- ggplot(lenabudat, aes(x = avelen, y = abundances)) +
-    geom_point(aes(color = shoreloc), size = 4) + 
-    geom_errorbarh(aes(xmin = avelen - stelen, xmax = avelen + stelen, color = shoreloc), height = 0) +
-    geom_smooth(method = 'lm', colour = 'black', se = F) + 
-    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
-    theme_bw(base_family = 'serif', base_size = 16) +
-    theme(
-      legend.title = element_blank(),
-      strip.background = element_blank(),
-      legend.position = 'top'
-      ) +
-    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
-    ylab('Counts') + 
-    xlab('Length') +
-    scale_linetype_manual(values = c(0, 2))
-  
-  if(logm)
-    p <- p + scale_y_log10('log-Counts')
+  if(!as.logical(logm)){
+    p <- ggplot(lenabudat, aes(x = avelen, y = abundances)) +
+      geom_point(aes(color = shoreloc), size = 4) + 
+      geom_errorbarh(aes(xmin = avelen - stelen, xmax = avelen + stelen, color = shoreloc), height = 0) +
+      geom_smooth(method = 'lm', colour = 'black', se = F) + 
+      geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+      theme_bw(base_family = 'serif', base_size = 16) +
+      theme(
+        legend.title = element_blank(),
+        strip.background = element_blank(),
+        legend.position = 'top'
+        ) +
+      scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+      ylab('Counts') + 
+      xlab('Length') +
+      scale_linetype_manual(values = c(0, 2))
+  } else {
+    p <- ggplot(lenabudat, aes(x = avelen, y = log10(1 + abundances))) +
+      geom_point(aes(color = shoreloc), size = 4) + 
+      geom_errorbarh(aes(xmin = avelen - stelen, xmax = avelen + stelen, color = shoreloc), height = 0) +
+      geom_smooth(method = 'lm', colour = 'black', se = F) + 
+      geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
+      theme_bw(base_family = 'serif', base_size = 16) +
+      theme(
+        legend.title = element_blank(),
+        strip.background = element_blank(),
+        legend.position = 'top'
+        ) +
+      scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+      ylab('log-Counts') + 
+      xlab('Length') +
+      scale_linetype_manual(values = c(0, 2))
+  }
   
   return(p)
 
@@ -614,10 +642,10 @@ abuenvdat <- reactive({
   # input
   envdep <- envdep()
   lng <- input$lng
-  
+  # browser()
   out <- inner_join(envdep, abudat, by = 'CTD') %>% 
-    left_join(shoreloc, by = 'CTD') %>% 
-    filter(!is.na(shoreloc))
+    left_join(shoreloc, by = 'CTD') #%>% 
+    # filter(!is.na(shoreloc))
   
   return(out)
   
@@ -650,27 +678,27 @@ abuenvmod <- reactive({
       dattyp = 'All data'
     )
   
-  # onshore only
-  onsmods <- abuenvdat %>% 
-    filter(shoreloc %in% 'onshore') %>% 
-    group_by(var) %>% 
-    nest %>% 
-    mutate(
-      mod = map(data, function(x){
-        
-        if(logm)
-          modout <- lm(log10(abundances) ~ val, data = x)
-        else 
-          modout <- lm(abundances ~ val, data = x)
-        
-        summary(modout)
-        
-      }),
-      dattyp = 'On shore'
-    )
+  # # onshore only
+  # onsmods <- abuenvdat %>% 
+  #   filter(shoreloc %in% 'onshore') %>% 
+  #   group_by(var) %>% 
+  #   nest %>% 
+  #   mutate(
+  #     mod = map(data, function(x){
+  #       
+  #       if(logm)
+  #         modout <- lm(log10(abundances) ~ val, data = x)
+  #       else 
+  #         modout <- lm(abundances ~ val, data = x)
+  #       
+  #       summary(modout)
+  #       
+  #     }),
+  #     dattyp = 'On shore'
+  #   )
   
   # combine models get summaries
-  out <- rbind(allmods, onsmods) %>% 
+  out <- rbind(allmods) %>% #, onsmods) %>% 
     mutate(summod = map(mod, getsum)) %>% 
     select(var, dattyp, summod) %>% 
     unnest %>% 
@@ -692,24 +720,37 @@ abuenvplo <- reactive({
   abuenvdat <- abuenvdat()
 
   # plot
-  p <- ggplot(abuenvdat, aes(x = val, y = abundances)) +
-    geom_point(aes(color = shoreloc), size = 4) + 
-    facet_grid( ~ var, scales = 'free_x') + 
-    geom_smooth(method = 'lm', colour = 'black', se = F) + 
-    geom_smooth(aes(group = shoreloc, linetype = shoreloc), colour = 'aquamarine3', se = F, method = 'lm') +
-    theme_bw(base_family = 'serif', base_size = 16) +
-    theme(
-      legend.title = element_blank(),
-      strip.background = element_blank(),
-      legend.position = 'top'
-      ) +
-    scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
-    ylab('Counts') + 
-    xlab('Environmental variable') +
-    scale_linetype_manual(values = c(0, 2))
-  
-  if(logm)
-    p <- p + scale_y_log10('log-Counts')
+  if(!as.logical(logm)){
+    
+    p <- ggplot(abuenvdat, aes(x = val, y = abundances)) +
+      geom_point(size = 4) + 
+      facet_grid( ~ var, scales = 'free_x') + 
+      geom_smooth(method = 'lm', colour = 'black', se = F) + 
+      theme_bw(base_family = 'serif', base_size = 16) +
+      theme(
+        legend.title = element_blank(),
+        strip.background = element_blank(),
+        legend.position = 'top'
+        ) +
+      ylab('Counts') + 
+      xlab('Environmental variable') 
+
+  } else {
+    
+    p <- ggplot(abuenvdat, aes(x = val, y = log10(1 + abundances))) +
+      geom_point(size = 4) +
+      facet_grid( ~ var, scales = 'free_x') +
+      geom_smooth(method = 'lm', colour = 'black', se = F) +
+      theme_bw(base_family = 'serif', base_size = 16) +
+      theme(
+        legend.title = element_blank(),
+        strip.background = element_blank(),
+        legend.position = 'top'
+        ) +
+      ylab('Counts') +
+      xlab('Environmental variable')
+    
+  }
   
   return(p)
   
