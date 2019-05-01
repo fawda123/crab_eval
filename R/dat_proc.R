@@ -146,7 +146,7 @@ save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 CTD.df <- read.csv('data/raw/CTD_data.csv', stringsAsFactors = FALSE )
 
 envdatdelt <- crossing(
-  var = c('pH.TOT', 'Arag', 'CTD.T', 'pCO2', 'CTD.O2'),
+  var = c('pH.TOT', 'Arag', 'Calc', 'CTD.T', 'pCO2', 'CTD.O2'),
   depth = seq(10, 200, by = 10),
   Stn = unique(CTD.df$Sta[!is.na(CTD.df$Sta)])
 ) %>% 
@@ -156,6 +156,7 @@ envdatdelt <- crossing(
     delt = calc.1.V(data.frame(Stn = Stn), CTD.df, var, depth, 0, c(0, depth), depth)[[1]],
     var = case_when(
       var %in% 'Arag' ~ 'Aragonite',
+      var %in% 'Calc' ~ 'Calcite', 
       var %in% 'pH.TOT' ~ 'pH', 
       var %in% 'CTD.T' ~ 'Temperature', 
       var %in% 'pCO2' ~ 'pCO2',
