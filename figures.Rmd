@@ -107,56 +107,20 @@ knitr::kable(totab)
 
 <!-- [download](figs/statmap.jpg) -->
 
-## Figure 2
-
-Dissolution type averaged:
-```{r, fig.height = 3, fig.width = 6}
-toplo1 <- dissdat %>% 
-  filter(!prt %in% 'body part') %>% 
-  spread(prt, disval) 
-
-p1 <- ggplot(toplo1, aes(y = internal, x = legs)) + 
-  geom_point() + 
-  ylab('Internal') + 
-  xlab('External (legs)') + 
-  geom_abline(slope = 1, intercept = 0) + 
-  pbase + 
-  # coord_equal() +
-  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
-  geom_text_repel(aes(label = CTD), size = 3) + 
-  ggtitle('(a)')
-
-toplo2 <- dissdat %>% 
-  filter(!prt %in% 'legs') %>% 
-  spread(prt, disval)
-
-p2 <- ggplot(toplo2, aes(y = internal, x = `body part`)) + 
-  geom_point() + 
-  ylab('Internal') + 
-  xlab('External (body part)') + 
-  geom_abline(slope = 1, intercept = 0) + 
-  pbase + 
-  # coord_equal() +
-  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
-  geom_text_repel(aes(label = CTD), size = 3) +
-  ggtitle('(b)')
-
-p1 + p2 + plot_layout(ncol = 2)
-```
-
 Dissolution type averaged, external type averaged:
 ```{r, fig.height = 3, fig.width = 3}
 toplo <- dissdat %>% 
   spread(prt, disval) %>% 
+  # filter(!CTD %in% 109) %>%
   mutate(
-    external = `body part` + legs 
+    external = `body part` + legs / 2
   ) %>% 
   select(CTD, internal, external)
 
-p1 <- ggplot(toplo, aes(y = internal, x = external)) + 
+p1 <- ggplot(toplo, aes(y = external, x = internal)) + 
   geom_point() + 
-  ylab('Internal') + 
-  xlab('External') + 
+  xlab('Internal') + 
+  ylab('External') + 
   geom_abline(slope = 1, intercept = 0) + 
   pbase + 
   # coord_equal() +
@@ -164,11 +128,12 @@ p1 <- ggplot(toplo, aes(y = internal, x = external)) +
   geom_text_repel(aes(label = CTD), size = 3)
 p1
 
+summary(lm(external ~ internal, toplo))
 ```
 
-## Figure 3
+## Figure 2
 
-## Figure 4
+## Figure 3
 
 ```{r, fig.height = 4, fig.width = 4}
 datbio<- dissdat %>% 
@@ -202,8 +167,8 @@ datbio <- datbio %>%
   column_to_rownames('CTD')
 
 datenv <- envdatdelt %>%
-  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Fluorescence')) %>% 
-  filter(depth %in% 100) %>% 
+  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature', 'Fluorescence')) %>% 
+  filter(depth %in% 60) %>% 
   filter(CTD %in% row.names(datbio)) %>% 
   complete(CTD, var) %>% 
   group_by(var) %>% 
@@ -222,23 +187,26 @@ ggord(ord, axes = c('1', '2'), vec_ext = 1, ptslab = T, parse = T, obslab = T, l
 summary(ord)
 ```
 
-## Figure 5
+## Figure 4
 
 ```{r, fig.height = 4.5, fig.width = 9}
 datbio<- dissdat %>% 
-  filter(!CTD %in% c(109)) %>% 
+  # filter(!CTD %in% c(109)) %>% 
   spread(prt, disval) %>% 
   mutate(
-    external = `body part` + legs
+    external = `body part` + legs / 2
   ) %>% 
   select(CTD, internal, external)
 
 lengdatsub <- lengdat %>% 
   filter(lenvar %in% 'CW')
 
+abucrbs <- crbs %>% 
+  dplyr::select(CTD, abundances)
+
 datbio <- datbio %>% 
   left_join(lengdatsub, by = 'CTD') %>% 
-  left_join(crbs, by = 'CTD') %>% 
+  full_join(crbs, by = 'CTD') %>% 
   select(CTD, internal, external, avelen, abundances) %>% 
   rename(
     `Ext.diss` = external,
@@ -271,7 +239,7 @@ outlab <- data.frame(
 
 datenv <- envdatdelt %>% 
   filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Fluorescence')) %>% 
-  filter(depth %in% 50) %>% 
+  filter(depth %in% 60) %>% 
   select(-depth) %>% 
   filter(CTD %in% datbio$CTD) %>% 
   complete(CTD, var) %>% 
@@ -282,7 +250,7 @@ datenv <- envdatdelt %>%
 
 dat_cor <- datbio %>% 
   inner_join(datenv, by = 'CTD') %>% 
-  select(-CTD)
+  dplyr::select(-CTD)
 
 crs <- crossing(var1 = names(dat_cor), var2 = names(dat_cor)) %>% 
   filter(var1 != var2) %>% 
@@ -341,89 +309,12 @@ p1 <- ggplot(prplo) +
   geom_hline(yintercept = 5.5, size = 1.5) +
   geom_vline(xintercept = 5.5, size = 1.5) 
 
-##
-# p2
-
-datenv <- envdatdelt %>% 
-  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Fluorescence')) %>% 
-  filter(depth %in% 100) %>% 
-  select(-depth) %>% 
-  filter(CTD %in% datbio$CTD) %>% 
-  complete(CTD, var) %>% 
-  group_by(var) %>% 
-  mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
-  ungroup %>% 
-  spread(var, val)
-
-dat_cor <- datbio %>% 
-  inner_join(datenv, by = 'CTD') %>% 
-  select(-CTD)
-
-crs <- crossing(var1 = names(dat_cor), var2 = names(dat_cor)) %>% 
-  filter(var1 != var2) %>% 
-  rownames_to_column() %>% 
-  group_by(rowname) %>% 
-  nest %>% 
-  mutate(
-    crs = map(data, function(x){
-      
-      # variables
-      vr1 <- dat_cor[[x$var1]]
-      vr2 <- dat_cor[[x$var2]]
-      
-      # pearson
-      pr_ts <- cor.test(vr1, vr2, method = 'pearson')
-      pr_cr <- round(pr_ts$estimate, 2)
-      pr_pv <- p_ast(pr_ts$p.value)
-      pr <- paste(pr_cr, pr_pv)
-    
-      out <- data.frame(pr = pr, stringsAsFactors = F)
-      return(out)
-      
-    })
-  ) %>% 
-  unnest %>% 
-  select(-rowname)
-
-levs <- names(dat_cor)
-labs <- levs
-prplo <- crs %>% 
-  separate(pr, c('cor', 'sig'), sep = ' ') %>% 
-  filter(var1 %in% levs & var2 %in% levs) %>%  
-  mutate(
-    cor = as.numeric(cor), 
-    var1 = factor(var1, levels = rev(levs), labels = rev(labs)), 
-    var2 = factor(var2, levels = rev(levs), labels = rev(labs)), 
-    sig = gsub('ns', '', sig)
-  )
-
-p2 <- ggplot(prplo) + 
-  geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
-  # geom_text(aes(y = var1, x = var2, label = sig)) +
-  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.6)),
-                    ymin = outlab$y[1], ymax = outlab$y[1], xmin = 9.75, xmax = 9.75) +
-  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.6)),
-                    ymin = outlab$y[2], ymax = outlab$y[2], xmin = 9.75, xmax = 9.75) +
-  annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0.5, gp = gpar(cex = 0.6)),
-                    xmin = outlab$y[1], xmax = outlab$y[1], ymin = 9.75, ymax = 9.75) +
-  annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0.5, gp = gpar(cex = 0.6)),
-                    xmin = outlab$y[2], xmax = outlab$y[2], ymin = 9.75, ymax = 9.75) +
-  pbase +
-  scale_y_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) + 
-  scale_x_discrete('', expand = c(0, 0), labels = parse(text = rev(labs))) +
-  scale_fill_gradient2('Correlation', low = muted("blue"), mid = "white", high = muted("green"), midpoint = 0, limits = c(-1, 1)) +
-  guides(fill = guide_colourbar(barheight = 0.5, barwidth = 5, label.theme = element_text(size = 6, angle = 0))) +
-  geom_hline(yintercept = 5.5, size = 1.5) +
-  geom_vline(xintercept = 5.5, size = 1.5)
 
 # Code to override clipping
 gt1 <- ggplot_gtable(ggplot_build(p1))
 gt1$layout$clip[gt1$layout$name == "panel"] <- "off"
-gt2 <- ggplot_gtable(ggplot_build(p2))
-gt2$layout$clip[gt2$layout$name == "panel"] <- "off"
 grid.arrange(
-  arrangeGrob(textGrob('(a) 20 m'), gt1, ncol = 1, heights = c(0.05, 1)), 
-  arrangeGrob(textGrob('(b) 100 m'), gt2, ncol = 1, heights = c(0.05, 1)), 
+  arrangeGrob(textGrob('60 m'), gt1, ncol = 1, heights = c(0.05, 1)), 
   ncol = 2
 )
 ```

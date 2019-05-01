@@ -105,9 +105,10 @@ dissdat <- dissdat %>%
 # average ridges, crystals for body part legs
 # average ridges, crystals, pore for internal
 dissdat <- dissdat %>% 
-  filter(!(prt %in% c('body part', 'legs') & distyp %in% 'diss_pore')) %>% 
+  filter(!(distyp %in% 'diss_pore')) %>% 
   group_by(CTD, prt) %>% 
-  summarise(disval = mean(disval, na.rm = T))
+  summarise(disval = mean(disval, na.rm = T)) %>% 
+  ungroup
   
 save(dissdat, file = 'data/dissdat.RData', compress = 'xz')
 
