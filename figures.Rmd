@@ -107,47 +107,122 @@ knitr::kable(totab)
 
 <!-- [download](figs/statmap.jpg) -->
 
-```{r, fig.height = 4, fig.width = 7, fig.cap = 'Present day pH and dissolved inorganic carbon at stations where crabs were sampled (including those sampled but no crabs were found) and the relationship between external and internal dissoluation at stations where crabs were found.' }
+```{r, fig.height = 7, fig.width = 7, fig.cap = ''}
 
-toplo1 <- envdatdelt %>% 
-  filter(var %in% c('DIC', 'pH')) %>% 
+envplo <- envdatdelt %>% 
+  filter(var %in% c('pHdelt', 'pH')) %>% 
   filter(depth %in% 60) %>% 
   filter(CTD %in% crbs$CTD) %>% 
   dplyr::select(CTD, var, val) %>% 
   spread(var, val)
 
-p1 <- ggplot(toplo1, aes(y = pH, x = DIC)) + 
-  geom_point() + 
-  pbase + 
-  # scale_y_continuous(limits = c(0, 2)) + 
-  # scale_x_continuous(limits = c(0, 2)) +
-  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
-  geom_text_repel(aes(label = CTD), size = 3) + 
-  ggtitle('(a)')
-
-toplo2 <- dissdat %>% 
+displo <- dissdat %>% 
   spread(prt, disval) %>% 
   # filter(!CTD %in% 109) %>%
   mutate(
     external = (`body part` + legs) / 2
   ) %>% 
+  # gather('var', 'val', internal, external) %>% 
+  # mutate(val = scales::rescale(val)) %>% 
+  # spread(var, val) %>% 
   select(CTD, internal, external)
 
-p2 <- ggplot(toplo2, aes(y = external, x = internal)) + 
-  geom_point() + 
-  xlab('Internal') + 
-  ylab('External') + 
-  geom_abline(slope = 1, intercept = 0) + 
+lenplo <- lengdat %>% 
+  filter(lenvar %in% 'CW') %>% 
+  dplyr::select(CTD, avelen)
+
+toplo <- displo %>% 
+  left_join(lenplo, by = 'CTD') %>% 
+  left_join(envplo, by = 'CTD') %>% 
+  left_join(shoreloc, by = 'CTD')
+
+p1 <- ggplot(toplo, aes(x = pHdelt, y = external, colour = shoreloc)) + 
+  geom_point(size = 2.5, alpha = 0.8) + 
   pbase + 
-  scale_y_continuous(limits = c(0, 2)) + 
-  scale_x_continuous(limits = c(0, 2)) +
+  theme(
+    legend.title = element_blank(), 
+    legend.position = 'none'
+    ) + 
+  scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+  xlab(expression(paste(Delta, 'pH'[60]))) +
+  ylab('Relative external dissolution') +
+  # scale_y_continuous(limits = c(0, 1)) +
   geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
-  geom_text_repel(aes(label = CTD), size = 3) + 
+  geom_text_repel(aes(label = CTD), size = 3, show.legend = F) + 
+  guides(text) +
+  ggtitle('(a)') 
+
+p2 <- ggplot(toplo, aes(x = pH, y = internal, colour = shoreloc)) + 
+  geom_point(size = 2.5, alpha = 0.8) + 
+  pbase + 
+  theme(
+    legend.title = element_blank(), 
+    legend.position = 'none'
+    ) + 
+  scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+  xlab(expression(paste('pH'[60]))) +
+  ylab('Relative internal dissolution') +
+  # scale_y_continuous(limits = c(0, 1)) +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3, show.legend = F) + 
+  guides(text) +
   ggtitle('(b)') 
 
-p1 + p2 + plot_layout(ncol = 2)
+p3 <- ggplot(toplo, aes(x = internal,  y = external, colour = shoreloc)) + 
+  geom_point(size = 2.5, alpha = 0.8) + 
+  xlab('Relative internal dissolution') + 
+  ylab('Relative external dissolution') + 
+  geom_abline(slope = 1, intercept = 0) + 
+  pbase + 
+  theme(
+    legend.title = element_blank(), 
+    legend.position = 'none'
+    ) + 
+  scale_y_continuous(limits = c(0, 2)) +
+  scale_x_continuous(limits = c(0, 2)) +
+  scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3, show.legend = F) + 
+  ggtitle('(c)') 
 
-summary(lm(external ~ internal, toplo2))
+
+onshoredat <- toplo %>% 
+  filter(shoreloc %in% 'onshore')
+p4 <- ggplot(toplo, aes(x = external,  y = avelen, colour = shoreloc)) + 
+  geom_point(size = 2.5, alpha = 0.8) +  
+  xlab('Relative external dissolution') + 
+  ylab('Carapace width') + 
+  pbase + 
+  theme(
+    legend.title = element_blank(), 
+    legend.position = 'top'
+    ) + 
+  # scale_y_continuous(limits = c(0, 1)) + 
+  # scale_x_continuous(limits = c(0, 1)) +
+  scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_smooth(data = onshoredat, method = 'lm', se= F, linetype = 'solid', colour = 'aquamarine3',alpha = 0.7) +
+  geom_text_repel(aes(label = CTD), size = 3, show.legend = F) + 
+  ggtitle('(d)') 
+
+pleg <- g_legend(p4)
+p4 <- p4 + theme(legend.position = 'none')
+
+wrap_elements(pleg) + (p1 + p2 + p3 + p4 + plot_layout(ncol = 2)) + plot_layout(ncol = 1, heights = c(0.05, 1))
+```
+
+```{r}
+phmod <- lm(internal ~ pH, toplo)
+
+df <- data.frame(
+    pH = c(8.17, 8.043, 7.92, 7.82), 
+    lab = c('pre-industrial', 'current', 'future45', 'future85')
+  ) %>% 
+  mutate(
+    internal = predict(phmod, newdata = ., se.fit = T)$fit,
+    sefit = predict(phmod, newdata = ., se.fit = T)$se.fit
+  )
+df
 ```
 
 ## Figure 2
