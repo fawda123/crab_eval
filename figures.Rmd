@@ -107,28 +107,47 @@ knitr::kable(totab)
 
 <!-- [download](figs/statmap.jpg) -->
 
-Dissolution type averaged, external type averaged:
-```{r, fig.height = 3, fig.width = 3}
-toplo <- dissdat %>% 
+```{r, fig.height = 4, fig.width = 7, fig.cap = 'Present day pH and dissolved inorganic carbon at stations where crabs were sampled (including those sampled but no crabs were found) and the relationship between external and internal dissoluation at stations where crabs were found.' }
+
+toplo1 <- envdatdelt %>% 
+  filter(var %in% c('DIC', 'pH')) %>% 
+  filter(depth %in% 60) %>% 
+  filter(CTD %in% crbs$CTD) %>% 
+  dplyr::select(CTD, var, val) %>% 
+  spread(var, val)
+
+p1 <- ggplot(toplo1, aes(y = pH, x = DIC)) + 
+  geom_point() + 
+  pbase + 
+  # scale_y_continuous(limits = c(0, 2)) + 
+  # scale_x_continuous(limits = c(0, 2)) +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
+  geom_text_repel(aes(label = CTD), size = 3) + 
+  ggtitle('(a)')
+
+toplo2 <- dissdat %>% 
   spread(prt, disval) %>% 
   # filter(!CTD %in% 109) %>%
   mutate(
-    external = `body part` + legs / 2
+    external = (`body part` + legs) / 2
   ) %>% 
   select(CTD, internal, external)
 
-p1 <- ggplot(toplo, aes(y = external, x = internal)) + 
+p2 <- ggplot(toplo2, aes(y = external, x = internal)) + 
   geom_point() + 
   xlab('Internal') + 
   ylab('External') + 
   geom_abline(slope = 1, intercept = 0) + 
   pbase + 
-  # coord_equal() +
+  scale_y_continuous(limits = c(0, 2)) + 
+  scale_x_continuous(limits = c(0, 2)) +
   geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
-  geom_text_repel(aes(label = CTD), size = 3)
-p1
+  geom_text_repel(aes(label = CTD), size = 3) + 
+  ggtitle('(b)') 
 
-summary(lm(external ~ internal, toplo))
+p1 + p2 + plot_layout(ncol = 2)
+
+summary(lm(external ~ internal, toplo2))
 ```
 
 ## Figure 2

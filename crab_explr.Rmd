@@ -33,6 +33,7 @@ data(envdatdelt)
 
 # get all values and only ph delt
 envdatdelt <- envdatdelt %>% 
+  filter(!var %in% 'DIC') %>% 
   gather('envtyp', 'envval', val, delt) %>% 
   unite('var', var, envtyp, sep = '') %>% 
   filter(grepl('val$|^pHdelt$', var)) %>% 

@@ -146,7 +146,7 @@ save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 CTD.df <- read.csv('data/raw/CTD_data.csv', stringsAsFactors = FALSE )
 
 envdatdelt <- crossing(
-  var = c('pH.TOT', 'Arag', 'Calc', 'CTD.T', 'pCO2', 'CTD.O2'),
+  var = c('pH.TOT', 'Arag', 'Calc', 'CTD.T', 'DIC', 'pCO2', 'CTD.O2'),
   depth = seq(10, 200, by = 10),
   Stn = unique(CTD.df$Sta[!is.na(CTD.df$Sta)])
 ) %>% 
@@ -160,7 +160,8 @@ envdatdelt <- crossing(
       var %in% 'pH.TOT' ~ 'pH', 
       var %in% 'CTD.T' ~ 'Temperature', 
       var %in% 'pCO2' ~ 'pCO2',
-      var %in% 'CTD.O2' ~ 'Oxygen'
+      var %in% 'CTD.O2' ~ 'Oxygen', 
+      var %in% 'DIC' ~ 'DIC'
     )
   ) %>% 
   ungroup %>% 
