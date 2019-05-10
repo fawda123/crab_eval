@@ -85,9 +85,9 @@ library(readxl)
 dissdat <- read_excel('data/raw/Copy of SEM crab scoring sheet_renewed analyses_finalised.xlsx', skip = 2)
 nms <- names(dissdat)
 nms <- case_when(
-  nms %in% c('X__3') ~ 'diss_pore',
-  nms %in% c('X__6') ~ 'diss_ridg', 
-  nms %in% c('X__9') ~ 'diss_crys', 
+  nms %in% c('...7') ~ 'diss_pore',
+  nms %in% c('...11') ~ 'diss_ridg', 
+  nms %in% c('...15') ~ 'diss_crys', 
   nms == 'CTD station' ~ 'CTD',
   nms == 'Body part' ~ 'prt',
   T ~ nms
@@ -99,7 +99,8 @@ dissdat <- dissdat %>%
   fill_('CTD') %>% 
   mutate(prt = gsub('^Body part$', 'body part', prt)) %>% 
   mutate_if(!names(.) %in% 'prt', as.numeric) %>% 
-  gather('distyp', 'disval', -CTD, -prt)
+  gather('distyp', 'disval', -CTD, -prt) %>% 
+  mutate(disval = disval / 2) # severity of relative dissolution
 
 # combine dissolution measures 
 # average ridges, crystals for body part legs

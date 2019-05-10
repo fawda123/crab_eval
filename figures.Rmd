@@ -178,8 +178,8 @@ p3 <- ggplot(toplo, aes(x = internal,  y = external, colour = shoreloc)) +
     legend.title = element_blank(), 
     legend.position = 'none'
     ) + 
-  scale_y_continuous(limits = c(0, 2)) +
-  scale_x_continuous(limits = c(0, 2)) +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_x_continuous(limits = c(0, 1)) +
   scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
   geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
   geom_text_repel(aes(label = CTD), size = 3, show.legend = F) + 
@@ -212,6 +212,36 @@ wrap_elements(pleg) + (p1 + p2 + p3 + p4 + plot_layout(ncol = 2)) + plot_layout(
 ```
 
 ```{r}
+# dissolution predictions for internal, 10m model, onshore only
+
+envplo <- envdatdelt %>% 
+  filter(var %in% c('pHdelt', 'pH')) %>% 
+  filter(depth %in% 10) %>% 
+  filter(CTD %in% crbs$CTD) %>% 
+  dplyr::select(CTD, var, val) %>% 
+  spread(var, val)
+
+displo <- dissdat %>% 
+  spread(prt, disval) %>% 
+  # filter(!CTD %in% 109) %>%
+  mutate(
+    external = (`body part` + legs) / 2
+  ) %>% 
+  # gather('var', 'val', internal, external) %>% 
+  # mutate(val = scales::rescale(val)) %>% 
+  # spread(var, val) %>% 
+  select(CTD, internal, external)
+
+lenplo <- lengdat %>% 
+  filter(lenvar %in% 'CW') %>% 
+  dplyr::select(CTD, avelen)
+
+toplo <- displo %>% 
+  left_join(lenplo, by = 'CTD') %>% 
+  left_join(envplo, by = 'CTD') %>% 
+  left_join(shoreloc, by = 'CTD') %>% 
+  filter(shoreloc %in% 'onshore')
+
 phmod <- lm(internal ~ pH, toplo)
 
 df <- data.frame(
