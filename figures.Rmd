@@ -211,6 +211,8 @@ p4 <- p4 + theme(legend.position = 'none')
 wrap_elements(pleg) + (p1 + p2 + p3 + p4 + plot_layout(ncol = 2)) + plot_layout(ncol = 1, heights = c(0.05, 1))
 ```
 
+### Internal dissolution and pH
+
 ```{r}
 # dissolution predictions for internal, 10m model, onshore only
 
@@ -251,6 +253,52 @@ df <- data.frame(
   mutate(
     internal = predict(phmod, newdata = ., se.fit = T)$fit,
     sefit = predict(phmod, newdata = ., se.fit = T)$se.fit
+  )
+df
+```
+
+### External dissolution and delta pH
+
+Baseline pHdelt is mean of phDelt observations for 60m.  Pre-industrial is the baseline phDelt - 6 \* 0.02 (estimated decadal change for six decades).   Post-industrial is the basdline phDelt + 8 \* 0.02 (estimated decadal change for 8 decades)
+```{r}
+# dissolution predictions for external, deltph model, onshore only, 60 m
+
+envplo <- envdatdelt %>% 
+  filter(var %in% c('pHdelt', 'pH')) %>% 
+  filter(depth %in% 60) %>% 
+  filter(CTD %in% crbs$CTD) %>% 
+  dplyr::select(CTD, var, val) %>% 
+  spread(var, val)
+
+displo <- dissdat %>% 
+  spread(prt, disval) %>% 
+  # filter(!CTD %in% 109) %>%
+  mutate(
+    external = (`body part` + legs) / 2
+  ) %>% 
+  select(CTD, internal, external)
+
+lenplo <- lengdat %>% 
+  filter(lenvar %in% 'CW') %>% 
+  dplyr::select(CTD, avelen)
+
+toplo <- displo %>% 
+  left_join(lenplo, by = 'CTD') %>% 
+  left_join(envplo, by = 'CTD') %>% 
+  left_join(shoreloc, by = 'CTD') %>% 
+  filter(shoreloc %in% 'onshore')
+
+phdeltmod <- lm(external ~ pHdelt, toplo)
+
+decchn <- 0.02
+bsedlt <- mean(toplo$pHdelt)
+df <- data.frame(
+    pHdelt = c(bsedlt - 6 * 0.02, bsedlt, bsedlt + 8 * 0.02), 
+    lab = c('pre-industrial', 'current', 'future')
+  ) %>% 
+  mutate(
+    external = predict(phdeltmod, newdata = ., se.fit = T)$fit,
+    sefit = predict(phdeltmod, newdata = ., se.fit = T)$se.fit
   )
 df
 ```
