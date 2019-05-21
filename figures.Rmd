@@ -259,7 +259,7 @@ df
 
 ### External dissolution and delta pH
 
-Baseline pHdelt is mean of phDelt observations for 60m.  Pre-industrial is the baseline phDelt - 6 \* 0.02 (estimated decadal change for six decades).   Post-industrial is the basdline phDelt + 8 \* 0.02 (estimated decadal change for 8 decades)
+Baseline pHdelt is mean of phDelt observations for 60m.  Pre-industrial is the baseline phDelt - 2 \* 0.02 (estimated decadal change for two decades prior).   Post-industrial is the baseline phDelt + 2 \* 0.02 (estimated decadal change for 2 decades post)
 ```{r}
 # dissolution predictions for external, deltph model, onshore only, 60 m
 
@@ -293,7 +293,7 @@ phdeltmod <- lm(external ~ pHdelt, toplo)
 decchn <- 0.02
 bsedlt <- mean(toplo$pHdelt)
 df <- data.frame(
-    pHdelt = c(bsedlt - 6 * 0.02, bsedlt, bsedlt + 8 * 0.02), 
+    pHdelt = c(bsedlt - 2 * 0.02, bsedlt, bsedlt + 2 * 0.02), 
     lab = c('pre-industrial', 'current', 'future')
   ) %>% 
   mutate(
