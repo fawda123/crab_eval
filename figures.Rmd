@@ -339,19 +339,25 @@ datbio <- datbio %>%
   column_to_rownames('CTD')
 
 datenv <- envdatdelt %>%
-  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature', 'Fluorescence')) %>% 
+  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature', 'Chla')) %>% 
   filter(depth %in% 60) %>% 
   filter(CTD %in% row.names(datbio)) %>% 
-  complete(CTD, var) %>% 
+  # complete(CTD, var) %>%
   group_by(var) %>% 
   mutate(val = ifelse(is.na(val), mean(val, na.rm = T), val)) %>% 
   ungroup %>% 
   spread(var, val) %>% 
   # filter(!CTD %in% 109) %>% 
   arrange(CTD) %>% 
+  # mutate(
+  #   Chla = ifelse(is.na(Chla), mean(Chla, na.rm = T), Chla)
+  # ) %>% 
   data.frame(stringsAsFactors = F) %>% 
   remove_rownames %>% 
   column_to_rownames('CTD')
+
+datbio <- datbio[!rownames(datbio) == 115, ]
+datenv <- datenv[!rownames(datenv) == 115, ]
 
 ord <- rda(datbio, datenv, scale = T)
 ggord(ord, axes = c('1', '2'), vec_ext = 1, ptslab = T, parse = T, obslab = T, labcol = 'tomato1', repel = T, coord_fix = F, addsize = 3) + 
@@ -410,7 +416,7 @@ outlab <- data.frame(
 # p1 
 
 datenv <- envdatdelt %>% 
-  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Fluorescence')) %>% 
+  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Chla')) %>% 
   filter(depth %in% 60) %>% 
   select(-depth) %>% 
   filter(CTD %in% datbio$CTD) %>% 

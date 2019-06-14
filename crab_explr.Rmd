@@ -42,7 +42,7 @@ envdatdelt <- envdatdelt %>%
   spread(var, val)
 
 # exp vars to use in cor eval
-vars <- c('pH', 'pHdelt', 'Temperature', 'Oxygen', 'Fluorescence')
+vars <- c('pH', 'pHdelt', 'Temperature', 'Oxygen', 'Chla')
 ```
 
 ```{r}
@@ -111,7 +111,8 @@ tocor <- reactive({
   out <- envdatdelt %>% 
     filter(depth %in% c(dep1)) %>% 
     left_join(crbs_eval, ., by = 'CTD') %>% 
-    dplyr::select_(.dots = c('depth', 'abundances', 'length', 'dissolution', crvrs)) 
+    dplyr::select_(.dots = c('depth', 'abundances', 'length', 'dissolution', crvrs)) %>% 
+    filter(!is.na(depth))
   
   if(as.logical(logm))
     out <- out %>%

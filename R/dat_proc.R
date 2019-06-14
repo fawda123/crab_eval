@@ -5,6 +5,7 @@ library(R.matlab)
 library(tidyverse)
 library(readxl)
 library(tibble)
+library(lubridate)
 
 source('R/funcs.R')
 
@@ -37,42 +38,6 @@ crbs <- crbs %>%
   arrange(CTD)
 
 save(crbs, file = 'data/crbs.RData', compress = 'xz')
-
-##
-# variable names
-
-vrnm <- raw$VarList %>% 
-  unlist %>% 
-  make.names %>% 
-  c('depth', 'CTD', .)
-
-##
-# environmental data
-
-# convert array to lis
-envdat <- raw$Data %>% 
-  array_tree(margin = 1) %>% 
-  enframe('depth') %>% 
-  mutate(
-    depth = 10 * depth, 
-    value = map(value, ~ data.frame(CTD = raw$Crabs[,1], .))
-  ) %>% 
-  unnest %>% 
-  rename_all(funs(c(vrnm)))
-
-# manually add data from Nina
-mandat <- tibble(
-  CTD = c(109, 128),
-  Temperature = c(7.59, 10.34),
-  Aragonite = c(0.89, 1.73), 
-  depth = c(100, 100)
-)
-
-# use rbind.fill to combine
-envdat <- plyr::rbind.fill(envdat, mandat) %>%
-  arrange(depth, CTD)
-  
-save(envdat, file = 'data/envdat.RData', compress = 'xz')
 
 ######
 # for disseval.Rmd
@@ -140,6 +105,8 @@ lengdat <- lengdatall %>%
 save(lengdat, file = 'data/lengdat.RData', compress = 'xz')
 
 ######
+# envdatdelt
+
 # estimate delta values for selected environmental variables
 # first, gam is created to predict estimated env var at zero depth
 # then, delt value is estimated
@@ -172,34 +139,40 @@ envdatdelt <- crossing(
   select(CTD, var, depth, val, delt) %>% 
   arrange(CTD, var, depth)
 
-# repeat but for flourescence in original envdat file
-data(envdat)
+##
+# chl data, only discrete surface samples
 
-envdatin <- envdat %>%
+chldat <- read_excel('data/raw/WCOA16_data_12-20-2017.xlsx') %>%
+  select(STATION_NO, YEAR_UTC, MONTH_UTC, DAY_UTC, CHL_A_UG_L_GFF) %>% 
+  unite('date', YEAR_UTC, MONTH_UTC, DAY_UTC, sep = '-') %>% 
+  mutate(date = ymd(date)) %>% 
   rename(
-    Sta = CTD,
-    Press = depth
-  )
-flodatdelt <- crossing(
-  var = c('Fluorescence'),
-  depth = seq(10, 200, by = 10),
-  Stn = unique(envdat$CTD)
-) %>% 
-  rowwise() %>% 
+    CTD = STATION_NO, 
+    Chla = CHL_A_UG_L_GFF
+  ) %>% 
+  filter(CTD %in% envdatdelt$CTD) %>% 
+  filter(Chla != -999) %>% 
+  group_by(CTD) %>% 
+  summarise(Chla = mean(Chla))
+
+# add dummy depths to chldat so it works with shiny
+dumdep <- crossing(
+  CTD = unique(chldat$CTD), 
+  depth = unique(envdatdelt$depth)
+)
+
+chldat <- dumdep %>% 
+  left_join(chldat, by = 'CTD') %>% 
   mutate(
-    val = calc.1.V(data.frame(Stn = Stn), envdatin, var, depth, 0, c(0, depth), depth)[[2]],
-    delt = calc.1.V(data.frame(Stn = Stn), envdatin, var, depth, 0, c(0, depth), depth)[[1]]
-  ) %>% 
-  ungroup %>% 
-  rename(
-    CTD = Stn
-  ) %>% 
-  select(CTD, var, depth, val, delt) %>% 
-  arrange(CTD, var, depth)
+    var = 'Chla',
+    delt = NA
+    ) %>% 
+  rename(val = Chla) %>% 
+  select(CTD, var, depth, val, delt)
 
 # combine with envdatdalt
 envdatdelt <- envdatdelt %>% 
-  rbind(flodatdelt) %>% 
+  rbind(chldat) %>% 
   arrange(var, depth)
 
 save(envdatdelt, file = 'data/envdatdelt.RData', compress = 'xz')
