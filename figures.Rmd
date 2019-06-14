@@ -470,7 +470,7 @@ prplo <- crs %>%
 
 p1 <- ggplot(prplo) + 
   geom_tile(aes(y = var1, x = var2, fill = cor), colour = 'black') + 
-  # geom_text(aes(y = var1, x = var2, label = sig)) +
+  geom_text(aes(y = var1, x = var2, label = sig)) +
   annotation_custom(grob = textGrob(label = outlab$lab[1], hjust = 0, gp = gpar(cex = 0.6)),
                     ymin = outlab$y[1], ymax = outlab$y[1], xmin = 9.75, xmax = 9.75) +
   annotation_custom(grob = textGrob(label = outlab$lab[2], hjust = 0, gp = gpar(cex = 0.6)),
