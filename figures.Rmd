@@ -38,7 +38,10 @@ envdatdelt <- envdatdelt %>%
   unite('var', var, envtyp, sep = '') %>% 
   filter(grepl('val$|^pHdelt|^Calcitedelt$', var)) %>% 
   mutate(var = gsub('\\val$', '', var)) %>% 
-  rename(val = envval)
+  rename(val = envval) %>% 
+  mutate(
+    val = ifelse(var %in% 'Chla', log10(val), val)
+  )
 ```
 
 # Figures and tables {.tabset}
@@ -66,6 +69,9 @@ Tables can also be provided to support regression results in the figures.
 Summary of environmental data at 50 m for sites that are onshore (less than 200 m depth) and those that are offshore (greater than 200 m depth).  
 ```{r}
 totab <- envdatdelt %>% 
+  mutate(
+    val = ifelse(var %in% 'Chla', 10 ^ val, val) # back-transform chla for table
+  ) %>% 
   filter(CTD %in% dissdat$CTD) %>% 
   filter(depth %in% 50) %>% 
   left_join(shoreloc, by = 'CTD') %>% 

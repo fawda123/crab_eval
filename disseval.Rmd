@@ -34,7 +34,10 @@ envdatdelt <- envdatdelt %>%
   unite('var', var, envtyp, sep = '') %>% 
   filter(grepl('val$|^pHdelt$', var)) %>% 
   mutate(var = gsub('\\val$', '', var)) %>% 
-  rename(val = envval)
+  rename(val = envval) %>% 
+  mutate(
+    val = ifelse(var %in% 'Chla', log10(val), val)
+  )
 ```
 
 ```{r selectors}
