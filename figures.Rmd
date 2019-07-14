@@ -73,7 +73,7 @@ totab <- envdatdelt %>%
     val = ifelse(var %in% 'Chla', 10 ^ val, val) # back-transform chla for table
   ) %>% 
   filter(CTD %in% dissdat$CTD) %>% 
-  filter(depth %in% 50) %>% 
+  filter(depth %in% 60) %>% 
   left_join(shoreloc, by = 'CTD') %>% 
   select(-depth) %>% 
   group_by(var, shoreloc) %>% 

@@ -12,6 +12,13 @@ lng <- lengdat %>%
 dissdat <- dissdat %>% 
   spread(prt, disval)
 
+# station locatins
+statloc <- read.csv('data/raw/CTD_data.csv', stringsAsFactors = FALSE ) %>% 
+  select(Sta, Long, Lat) %>% 
+  rename(CTD = Sta) %>% 
+  unique %>% 
+  na.omit()
+
 # get all values and only ph delt
 envdatdelt <- envdatdelt %>% 
   filter(!var %in% 'DIC') %>% 
@@ -34,7 +41,18 @@ alldat <- envdatdelt %>%
     external = (`body part` + legs) / 2
   ) %>% 
   full_join(lng, by = 'CTD') %>% 
-  full_join(shoreloc, by = 'CTD')
+  full_join(shoreloc, by = 'CTD') %>% 
+  left_join(statloc, by = 'CTD')
+
+# chl plot
+toplo <- alldat %>% 
+  select(CTD, Long, Lat, Chla) %>% 
+  filter(Lat > 45.5) %>% 
+  na.omit
+ggplot(toplo, aes(x = Long, y = Lat)) + 
+  geom_point(aes(fill = 10^Chla), pch = 21, size = 3) + 
+  coord_map() +
+  scale_fill_distiller(type = 'seq', palette = "RdYlBu", direction = 1)
 
 # internal
 
