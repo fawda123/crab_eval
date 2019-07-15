@@ -66,7 +66,7 @@ Tables can also be provided to support regression results in the figures.
 
 ## Table 1
 
-Summary of environmental data at 50 m for sites that are onshore (less than 200 m depth) and those that are offshore (greater than 200 m depth).  
+Summary of environmental data at 60 m for sites that are onshore (less than 200 m depth) and those that are offshore (greater than 200 m depth).  
 ```{r}
 totab <- envdatdelt %>% 
   mutate(
@@ -111,9 +111,9 @@ knitr::kable(totab)
 
 ## Figure 1
 
-<!-- [download](figs/statmap.jpg) -->
+[download](figs/regplot.jpg)
 
-```{r, fig.height = 7, fig.width = 7, fig.cap = ''}
+```{r regplot, fig.height = 7, fig.width = 7, fig.cap = ''}
 
 envplo <- envdatdelt %>% 
   filter(var %in% c('pHdelt', 'pH')) %>% 
@@ -265,14 +265,14 @@ df
 
 ### External dissolution and delta pH
 
-Baseline pHdelt is mean of phDelt observations for 60m.  Pre-industrial is the baseline phDelt - 2 \* 0.02 (estimated decadal change for two decades prior).   Post-industrial is the baseline phDelt + 2 \* 0.02 (estimated decadal change for 2 decades post)
+Baseline pHdelt is mean of phDelt observations for 60m.  Pre-industrial is the baseline phDelt - 2 \* 0.01 (estimated decadal change for two decades prior).   Post-industrial is the baseline phDelt + 2 \* 0.01 (estimated decadal change for 2 decades post)
 ```{r}
 # dissolution predictions for external, deltph model, onshore only, 60 m
 
 envplo <- envdatdelt %>% 
   filter(var %in% c('pHdelt', 'pH')) %>% 
   filter(depth %in% 60) %>% 
-  filter(CTD %in% crbs$CTD) %>% 
+  # filter(CTD %in% crbs$CTD) %>% 
   dplyr::select(CTD, var, val) %>% 
   spread(var, val)
 
@@ -296,10 +296,10 @@ toplo <- displo %>%
 
 phdeltmod <- lm(external ~ pHdelt, toplo)
 
-decchn <- 0.02
-bsedlt <- mean(toplo$pHdelt)
+decchn <- 0.01
+bsedlt <- mean(envplo$pHdelt)
 df <- data.frame(
-    pHdelt = c(bsedlt - 2 * 0.02, bsedlt, bsedlt + 2 * 0.02), 
+    pHdelt = c(bsedlt - 2 * 0.01, bsedlt, bsedlt + 2 * 0.01), 
     lab = c('pre-industrial', 'current', 'future')
   ) %>% 
   mutate(
@@ -311,9 +311,9 @@ df
 
 ## Figure 2
 
-## Figure 3
+[download](figs/rdaplot.jpg)
 
-```{r, fig.height = 4, fig.width = 4}
+```{r rdaplot, fig.height = 4, fig.width = 4}
 datbio<- dissdat %>% 
   # filter(!CTD %in% c(109)) %>%
   spread(prt, disval) %>% 
@@ -371,9 +371,11 @@ ggord(ord, axes = c('1', '2'), vec_ext = 1, ptslab = T, parse = T, obslab = T, l
 summary(ord)
 ```
 
-## Figure 4
+## Figure 3
 
-```{r, fig.height = 4.5, fig.width = 9}
+[download](figs/corplot.jpg)
+
+```{r corplot, fig.height = 4.5, fig.width = 4.5}
 datbio<- dissdat %>% 
   # filter(!CTD %in% c(109)) %>% 
   spread(prt, disval) %>% 
@@ -498,8 +500,9 @@ p1 <- ggplot(prplo) +
 gt1 <- ggplot_gtable(ggplot_build(p1))
 gt1$layout$clip[gt1$layout$name == "panel"] <- "off"
 grid.arrange(
-  arrangeGrob(textGrob('60 m'), gt1, ncol = 1, heights = c(0.05, 1)), 
-  ncol = 2
+  gt1
+  # arrangeGrob(textGrob('60 m'), gt1, ncol = 1, heights = c(0.05, 1)), 
+  # ncol = 2
 )
 ```
 
