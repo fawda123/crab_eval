@@ -278,14 +278,15 @@ df <- data.frame(
   ) %>% 
   mutate(
     internal = predict(phmod, newdata = ., se.fit = T)$fit,
-    sefit = predict(phmod, newdata = ., se.fit = T)$se.fit
+    sefit = predict(phmod, newdata = ., se.fit = T)$se.fit, 
+    perchg = (internal - subset(internal, lab == 'current')) / subset(internal, lab == 'current')
   )
 df
 ```
 
 ### External dissolution and delta pH
 
-Baseline pHdelt is mean of phDelt observations for 60m.  Pre-industrial is the baseline phDelt - 2 \* 0.01 (estimated decadal change for two decades prior).   Post-industrial is the baseline phDelt + 2 \* 0.01 (estimated decadal change for 2 decades post)
+Baseline pHdelt is mean of phDelt observations for 60m.  Pre-industrial is the baseline phDelt - 2 \* 0.02 (estimated decadal change for two decades prior).   Post-industrial is the baseline phDelt + 2 \* 0.02 (estimated decadal change for 2 decades post)
 ```{r}
 # dissolution predictions for external, deltph model, onshore only, 60 m
 
@@ -316,15 +317,16 @@ toplo <- displo %>%
 
 phdeltmod <- lm(external ~ pHdelt, toplo)
 
-decchn <- 0.01
+decchn <- 0.02
 bsedlt <- mean(envplo$pHdelt)
 df <- data.frame(
-    pHdelt = c(bsedlt - 2 * 0.01, bsedlt, bsedlt + 2 * 0.01), 
+    pHdelt = c(bsedlt - 2 * 0.02, bsedlt, bsedlt + 2 * 0.02), 
     lab = c('pre-industrial', 'current', 'future')
   ) %>% 
   mutate(
     external = predict(phdeltmod, newdata = ., se.fit = T)$fit,
-    sefit = predict(phdeltmod, newdata = ., se.fit = T)$se.fit
+    sefit = predict(phdeltmod, newdata = ., se.fit = T)$se.fit, 
+    perchg = (external - subset(external, lab == 'current')) / subset(external, lab == 'current')
   )
 df
 ```
