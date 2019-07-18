@@ -217,6 +217,26 @@ p4 <- p4 + theme(legend.position = 'none')
 wrap_elements(pleg) + (p1 + p2 + p3 + p4 + plot_layout(ncol = 2)) + plot_layout(ncol = 1, heights = c(0.05, 1))
 ```
 
+Panel a:
+```{r}
+lm(external ~ pHdelt, data = toplo) %>% summary
+```
+
+Panel b:
+```{r}
+lm(internal ~ pH, data = toplo) %>% summary
+```
+
+Panel c:
+```{r}
+lm(external ~ internal, data = toplo) %>% summary
+```
+
+Panel d:
+```{r}
+lm(avelen ~ external, data = onshoredat) %>% summary
+```
+
 ### Internal dissolution and pH
 
 ```{r}
