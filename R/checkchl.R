@@ -1,3 +1,4 @@
+library(tidyverse)
 
 data(dissdat)
 data(lengdat)

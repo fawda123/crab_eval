@@ -197,7 +197,7 @@ onshoredat <- toplo %>%
 p4 <- ggplot(toplo, aes(x = external,  y = avelen, colour = shoreloc)) + 
   geom_point(size = 2.5, alpha = 0.8) +  
   xlab('Relative external dissolution') + 
-  ylab('Carapace width') + 
+  ylab('Carapace width (mm)') + 
   pbase + 
   theme(
     legend.title = element_blank(), 
@@ -216,6 +216,8 @@ p4 <- p4 + theme(legend.position = 'none')
 
 wrap_elements(pleg) + (p1 + p2 + p3 + p4 + plot_layout(ncol = 2)) + plot_layout(ncol = 1, heights = c(0.05, 1))
 ```
+
+Estimated linear relationships between different pH gradients and disslution. a) $\Delta pH_{60}$ and relative external dissolution (R2 = 0.90; p < 0.001).  b) Depth-integrated pH at 60mband relative internal dissolution (R2 = 0.38; p = 0.078). c) Comparison of the relative external and internal dissolution (R2 = 0.24; p = 0.18). d) Relative external dissolution and carapace width (R2 = 0.57; p = 0.08).  Dotted lines show the linear regression fit between all points.  The solid line in (c) is the 1:1 line and the green line in (d) is the regression fit only through the onshore points. See methods for explanation of the term relative dissolution. 
 
 Panel a:
 ```{r}
