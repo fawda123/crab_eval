@@ -36,7 +36,7 @@ data(shoreloc)
 envdatdelt <- envdatdelt %>% 
   gather('envtyp', 'envval', val, delt) %>% 
   unite('var', var, envtyp, sep = '') %>% 
-  filter(grepl('val$|^pHdelt|^Calcitedelt$', var)) %>% 
+  filter(grepl('val$|^pHdelt|^Calcitedelt$|^Temperaturedelt$|^Oxygendelt$', var)) %>% 
   mutate(var = gsub('\\val$', '', var)) %>% 
   rename(val = envval) %>% 
   mutate(
@@ -45,24 +45,6 @@ envdatdelt <- envdatdelt %>%
 ```
 
 # Figures and tables {.tabset}
-
-## Layout
-
-Review comments received from PNAS indicated that the environmental data and results from elemental analysis (Fig. S6) were the most interesting contributions of the manuscript.  Let's consider restructuring the text to emphasize these results.  
-
-Introduction needs to describe lack of in situ data on environmental conditions that are relevant for evaluating larval response to low pH conditions - it hints at this but should be elaborated.  Also emphasize that we do not have a consistent methodology for measuring larval response to low pH, i.e., we need a consistent methodology for measure dissolution.  This will setup the rest of the text to highlight our environmental results and how the method for measuring dissolution is novel and leads to more insight (e.g., elemental results).
-
-1) Figure: study sites map
-1) Dissolution results: need to combine old figures 2, 4, S1, S2 in a way to show what information is obtained with the new method, reviewers commented that the info provided by each figure was unclear
-1) Elemental mapping: old Figure S6 but need to present more clearly
-1) Exploratory RDA plot for bio response and environmental variables
-1) Environmental data: maps, PCA, gradients, by depth (old S3 but with clarity)
-1) Correlation matrices: environmental v biological data
-1) Regression plots: dissolution measures vs each other (e.g., how is external related to internal), dissolution measures vs environmental gradients
-1) Regression plots: dissolution vs carapace width
-
-Tables can also be provided to support regression results in the figures.
-
 
 ## Table 1
 
@@ -116,7 +98,7 @@ knitr::kable(totab)
 ```{r regplot, fig.height = 7, fig.width = 7, fig.cap = ''}
 
 envplo <- envdatdelt %>% 
-  filter(var %in% c('pHdelt', 'pH')) %>% 
+  filter(var %in% c('Calcitedelt', 'pCO2')) %>% 
   filter(depth %in% 60) %>% 
   filter(CTD %in% crbs$CTD) %>% 
   dplyr::select(CTD, var, val) %>% 
@@ -142,7 +124,7 @@ toplo <- displo %>%
   left_join(envplo, by = 'CTD') %>% 
   left_join(shoreloc, by = 'CTD')
 
-p1 <- ggplot(toplo, aes(x = pHdelt, y = external, colour = shoreloc)) + 
+p1 <- ggplot(toplo, aes(x = Calcitedelt, y = external, colour = shoreloc)) + 
   geom_point(size = 2.5, alpha = 0.8) + 
   pbase + 
   theme(
@@ -150,7 +132,7 @@ p1 <- ggplot(toplo, aes(x = pHdelt, y = external, colour = shoreloc)) +
     legend.position = 'none'
     ) + 
   scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
-  xlab(expression(paste(Delta, 'pH'[60]))) +
+  xlab(expression(paste(Delta, 'Calcite'[60]))) +
   ylab('Relative external dissolution') +
   # scale_y_continuous(limits = c(0, 1)) +
   geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
@@ -158,7 +140,7 @@ p1 <- ggplot(toplo, aes(x = pHdelt, y = external, colour = shoreloc)) +
   guides(text) +
   ggtitle('(a)') 
 
-p2 <- ggplot(toplo, aes(x = pH, y = internal, colour = shoreloc)) + 
+p2 <- ggplot(toplo, aes(x = pCO2, y = internal, colour = shoreloc)) + 
   geom_point(size = 2.5, alpha = 0.8) + 
   pbase + 
   theme(
@@ -166,7 +148,7 @@ p2 <- ggplot(toplo, aes(x = pH, y = internal, colour = shoreloc)) +
     legend.position = 'none'
     ) + 
   scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
-  xlab(expression(paste('pH'[60]))) +
+  xlab(expression(paste('pCO2'[60]))) +
   ylab('Relative internal dissolution') +
   # scale_y_continuous(limits = c(0, 1)) +
   geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') + 
@@ -217,16 +199,16 @@ p4 <- p4 + theme(legend.position = 'none')
 wrap_elements(pleg) + (p1 + p2 + p3 + p4 + plot_layout(ncol = 2)) + plot_layout(ncol = 1, heights = c(0.05, 1))
 ```
 
-Estimated linear relationships between different pH gradients and disslution. a) $\Delta pH_{60}$ and relative external dissolution (R2 = 0.90; p < 0.001).  b) Depth-integrated pH at 60mband relative internal dissolution (R2 = 0.38; p = 0.078). c) Comparison of the relative external and internal dissolution (R2 = 0.24; p = 0.18). d) Relative external dissolution and carapace width (R2 = 0.57; p = 0.08).  Dotted lines show the linear regression fit between all points.  The solid line in (c) is the 1:1 line and the green line in (d) is the regression fit only through the onshore points. See methods for explanation of the term relative dissolution. 
+Estimated linear relationships between different pH gradients and disslution. a) $\Delta Calcite_{60}$ and relative external dissolution (R2 = 0.87; p < 0.001).  b) Depth-integrated pH at 60m and relative internal dissolution (R2 = 0.41; p = 0.064). c) Comparison of the relative external and internal dissolution (R2 = 0.24; p = 0.18). d) Relative external dissolution and carapace width (R2 = 0.57; p = 0.08).  Dotted lines show the linear regression fit between all points.  The solid line in (c) is the 1:1 line and the green line in (d) is the regression fit only through the onshore points. See methods for explanation of the term relative dissolution. 
 
 Panel a:
 ```{r}
-lm(external ~ pHdelt, data = toplo) %>% summary
+lm(external ~ Calcitedelt, data = toplo) %>% summary
 ```
 
 Panel b:
 ```{r}
-lm(internal ~ pH, data = toplo) %>% summary
+lm(internal ~ pCO2, data = toplo) %>% summary
 ```
 
 Panel c:
@@ -338,7 +320,7 @@ df
 [download](figs/rdaplot.jpg)
 
 ```{r rdaplot, fig.height = 4, fig.width = 4}
-datbio<- dissdat %>% 
+datbio <- dissdat %>% 
   # filter(!CTD %in% c(109)) %>%
   spread(prt, disval) %>% 
   mutate(
@@ -369,7 +351,7 @@ datbio <- datbio %>%
   column_to_rownames('CTD')
 
 datenv <- envdatdelt %>%
-  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature', 'Chla')) %>% 
+  filter(var %in% c('pCO2', 'Oxygen', 'Temperature', 'Chla', 'Calcitedelt', 'Temperaturedelt', 'Oxygendelt', 'Chladelt')) %>% 
   filter(depth %in% 60) %>% 
   filter(CTD %in% row.names(datbio)) %>% 
   # complete(CTD, var) %>%
@@ -384,7 +366,8 @@ datenv <- envdatdelt %>%
   # ) %>% 
   data.frame(stringsAsFactors = F) %>% 
   remove_rownames %>% 
-  column_to_rownames('CTD')
+  column_to_rownames('CTD') %>% 
+  dplyr::select(-depth)
 
 datbio <- datbio[!rownames(datbio) == 115, ]
 datenv <- datenv[!rownames(datenv) == 115, ]
@@ -393,6 +376,28 @@ ord <- rda(datbio, datenv, scale = T)
 ggord(ord, axes = c('1', '2'), vec_ext = 1, ptslab = T, parse = T, obslab = T, labcol = 'tomato1', repel = T, coord_fix = F, addsize = 3) + 
   theme_bw(base_family = 'serif') 
 summary(ord)
+```
+
+```{r}
+datbio <- datbio %>% 
+  rownames_to_column('CTD')
+tomod <- datenv %>% 
+  vegan::decostand(method = 'standardize') %>%
+  rownames_to_column('CTD') %>% 
+  full_join(datbio, by = 'CTD')
+
+# oxygen is collinear with pCO2, do not include
+mod1 <- lm(Int.diss ~ (pCO2 + Temperature + Chla), data = tomod)
+summary(mod1)
+summary(step(mod1, direction = 'backward'))
+
+mod2 <- lm(Ext.diss ~ (Calcitedelt + Oxygendelt + Temperaturedelt + Chla), data = tomod)
+summary(mod2)
+summary(step(mod2, direction ='backward'))
+
+mod3 <- lm(Carapace.width ~ (pCO2 + Temperature + Chla + Calcitedelt + Oxygendelt + Temperaturedelt), data = tomod)
+summary(mod3)
+summary(step(mod3, direction = 'backward'))
 ```
 
 ## Figure 3
@@ -440,15 +445,19 @@ pbase <- theme(
   ) 
 
 outlab <- data.frame(
-  y = c(2.5, 6.5), 
+  y = c(3, 7.5), 
   lab = c('Environment', 'Biology')
 )
 
 ##
 # p1 
 
+# levels, labels
+levs <- c('Int.diss', 'Ext.diss', 'Carapace.width', 'Abundances', 'Calcitedelt', 'pCO2', 'Temperature', 'Oxygen', 'Chla')
+labs <- c('Int.~diss', 'Ext.~diss', 'Carapace~width', 'Abundances', 'Delta~Calcite', 'pCO[2]', 'Temp', 'O[2]', 'Chla')
+
 datenv <- envdatdelt %>% 
-  filter(var %in% c('pH', 'pHdelt', 'Oxygen', 'Temperature','Chla')) %>% 
+  filter(var %in% levs) %>% 
   filter(depth %in% 60) %>% 
   select(-depth) %>% 
   filter(CTD %in% datbio$CTD) %>% 
@@ -488,8 +497,6 @@ crs <- crossing(var1 = names(dat_cor), var2 = names(dat_cor)) %>%
   unnest %>% 
   select(-rowname)
 
-levs <- names(dat_cor)
-labs <- levs
 prplo <- crs %>% 
   separate(pr, c('cor', 'sig'), sep = ' ') %>% 
   filter(var1 %in% levs & var2 %in% levs) %>%  

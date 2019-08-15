@@ -13,6 +13,7 @@ opts_chunk$set(warning = FALSE, message = FALSE, dev.args = list(bg = 'transpare
 library(tidyverse)
 library(shiny)
 library(kableExtra)
+library(shinyWidgets)
 
 source('R/funcs.R')
 
@@ -32,7 +33,7 @@ envdatdelt <- envdatdelt %>%
   filter(!var %in% 'DIC') %>% 
   gather('envtyp', 'envval', val, delt) %>% 
   unite('var', var, envtyp, sep = '') %>% 
-  filter(grepl('val$|^pHdelt$|^Temperaturedelt$|^Aragonitedelt$|^Calcitedelt$|^Oxygendelt$', var)) %>% 
+  filter(grepl('val$|^pCO2delt$|^Temperaturedelt$|^Calcitedelt$|^Oxygendelt$', var)) %>% 
   mutate(var = gsub('\\val$', '', var)) %>% 
   rename(val = envval) %>% 
   mutate(
@@ -403,11 +404,15 @@ envdepvif <- reactive({
   
   # input
   envdep <- envdep()
-
+  envvifsel <- input$envvifsel
+  req(envvifsel)
+  req(length(envvifsel) > 1)
+  
   # get vif values
   out <- envdep %>% 
+    filter(var %in% envvifsel) %>% 
     spread(var, val) %>% 
-    dplyr::select(Aragonite, Chla, pCO2, Oxygen, pH, Temperature) %>% 
+    dplyr::select(-CTD) %>% 
     nest %>% 
     mutate(
       vifchk = map(data, function(x){
@@ -443,7 +448,8 @@ envdepvif <- reactive({
       })
     ) %>% 
     select(-data) %>% 
-    unnest
+    unnest %>% 
+    gather('Variable', 'VIF')
   
   return(out)
 
@@ -878,7 +884,7 @@ renderTable({lenabumod()}, digits = 3)
 These tabs show the relationships of environmental variables with dissolution, length, and abundances. The drop-down menu below can be used to select environmental data from a specific depth.  Values for delta-pH are based on the difference between the observed value at the selected depth and that at the surface.  Stations 109 and 128 are excluded in the analysis because environmental data were unavailable.  
 
 ```{r}
-selectInput('dep', 'Select depth for environment:', choices = sort(unique(envdatdelt$depth)), selected = 50)
+selectInput('dep', 'Select depth for environment:', choices = sort(unique(envdatdelt$depth)), selected = 60)
 ```
 
 ### Dissolution
@@ -925,9 +931,21 @@ renderTable({prsenvmod()}, digits = 3)
 
 ```{r}
 renderUI({
+  
+  vrs <- envdep() %>% 
+    filter(!var %in% 'CTD') %>% 
+    pull(var) %>% 
+    unique
+    
+  pickerInput(inputId = "envvifsel", label = 'Select variables for VIF comparison:', choices = vrs,
+              selected = vrs, options = list(`actions-box` = TRUE, size = 20), multiple = TRUE)
+  
+})
 
- HTML(knitr::kable(envdepvif(), caption = 'VIF values for each variable relative to the others for models at the selected depths.', format = 'html') %>% 
-    kable_styling(full_width = T, font_size = 14))
+renderUI({
+
+ HTML(knitr::kable(envdepvif(), caption = 'VIF values for selection.', format = 'html') %>% 
+    kable_styling(full_width = F, font_size = 14))
   
 })
 ```
