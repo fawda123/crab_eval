@@ -351,7 +351,7 @@ datbio <- datbio %>%
   column_to_rownames('CTD')
 
 datenv <- envdatdelt %>%
-  filter(var %in% c('pCO2', 'Oxygen', 'Temperature', 'Chla', 'Calcitedelt', 'Temperaturedelt', 'Oxygendelt', 'Chladelt')) %>% 
+  filter(var %in% c('pCO2', 'Temperature', 'Calcitedelt', 'pH')) %>% 
   filter(depth %in% 60) %>% 
   filter(CTD %in% row.names(datbio)) %>% 
   # complete(CTD, var) %>%
@@ -378,7 +378,7 @@ ggord(ord, axes = c('1', '2'), vec_ext = 1, ptslab = T, parse = T, obslab = T, l
 summary(ord)
 ```
 
-```{r}
+```{r eval = F}
 datbio <- datbio %>% 
   rownames_to_column('CTD')
 tomod <- datenv %>% 
@@ -387,11 +387,11 @@ tomod <- datenv %>%
   full_join(datbio, by = 'CTD')
 
 # oxygen is collinear with pCO2, do not include
-mod1 <- lm(Int.diss ~ (pCO2 + Temperature + Chla), data = tomod)
+mod1 <- lm(Int.diss ~ (pCO2 + Temperature), data = tomod)
 summary(mod1)
 summary(step(mod1, direction = 'backward'))
 
-mod2 <- lm(Ext.diss ~ (Calcitedelt + Oxygendelt + Temperaturedelt + Chla), data = tomod)
+mod2 <- lm(Ext.diss ~ (Calcitedelt + Oxygendelt + Temperaturedelt), data = tomod)
 summary(mod2)
 summary(step(mod2, direction ='backward'))
 
