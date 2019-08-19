@@ -345,7 +345,7 @@ datbio <- datbio %>%
   rename(
     `Int.diss` = internal,
     `Ext.diss` = external, 
-    `Carapace.width` = avelen
+    `Width` = avelen
   ) %>% 
   data.frame(stringsAsFactors = F, check.names = F) %>% 
   remove_rownames %>% 
