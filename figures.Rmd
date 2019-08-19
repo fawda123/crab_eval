@@ -352,7 +352,7 @@ datbio <- datbio %>%
   column_to_rownames('CTD')
 
 datenv <- envdatdelt %>%
-  filter(var %in% c('pCO2', 'Temperature', 'Calcitedelt', 'pH')) %>% 
+  filter(var %in% c('pCO2', 'Temperature', 'Calcitedelt', 'pH', 'Oxygen')) %>% 
   filter(depth %in% 60) %>% 
   filter(CTD %in% row.names(datbio)) %>% 
   # complete(CTD, var) %>%
@@ -388,7 +388,7 @@ tomod <- datenv %>%
   full_join(datbio, by = 'CTD')
 
 # oxygen is collinear with pCO2, do not include
-mod1 <- lm(Int.diss ~ (pCO2 + Temperature), data = tomod)
+mod1 <- lm(Int.diss ~ (pCO2 + Temperature + Oxygen), data = tomod)
 summary(mod1)
 summary(step(mod1, direction = 'backward'))
 
@@ -421,8 +421,8 @@ abucrbs <- crbs %>%
   dplyr::select(CTD, abundances)
 
 datbio <- datbio %>% 
+  full_join(abucrbs, by = 'CTD') %>% 
   left_join(lengdatsub, by = 'CTD') %>% 
-  full_join(crbs, by = 'CTD') %>% 
   select(CTD, internal, external, avelen, abundances) %>% 
   rename(
     `Ext.diss` = external,

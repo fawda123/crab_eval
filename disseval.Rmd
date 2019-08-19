@@ -648,7 +648,7 @@ abuenvdat <- reactive({
   # input
   envdep <- envdep()
   lng <- input$lng
-  # browser()
+
   out <- inner_join(envdep, abudat, by = 'CTD') %>% 
     left_join(shoreloc, by = 'CTD') #%>% 
     # filter(!is.na(shoreloc))
