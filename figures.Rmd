@@ -94,7 +94,7 @@ knitr::kable(totab)
 
 ## Figure 1
 
-[download](figs/regplot.jpg)
+[download](figs/regplot.png)
 
 ```{r regplot, fig.height = 7, fig.width = 7, fig.cap = ''}
 
@@ -318,7 +318,7 @@ df
 
 ### Delta calcite vs deltapH
 
-[download](figs/calcvph.jpg)
+[download](figs/calcvph.png)
 
 ```{r calcvph, fig.height = 4, fig.width = 3.75}
 toplo <- envdatdelt %>% 
@@ -349,7 +349,7 @@ summary(lm(Calcitedelt ~ pHdelt, toplo))
 
 ## Figure 2
 
-[download](figs/rdaplot.jpg)
+[download](figs/rdaplot.png)
 
 ```{r rdaplot, fig.height = 4, fig.width = 4}
 datbio <- dissdat %>% 
@@ -434,7 +434,7 @@ summary(step(mod3, direction = 'backward'))
 
 ## Figure 3
 
-[download](figs/corplot.jpg)
+[download](figs/corplot.png)
 
 ```{r corplot, fig.height = 4.5, fig.width = 4.5}
 datbio<- dissdat %>% 
