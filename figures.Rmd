@@ -229,7 +229,7 @@ lm(avelen ~ external, data = onshoredat) %>% summary
 
 envplo <- envdatdelt %>% 
   filter(var %in% c('pHdelt', 'pH')) %>% 
-  filter(depth %in% 10) %>% 
+  filter(depth %in% 60) %>% 
   filter(CTD %in% crbs$CTD) %>% 
   dplyr::select(CTD, var, val) %>% 
   spread(var, val)
@@ -314,6 +314,37 @@ df <- data.frame(
     perchg = (external - subset(external, lab == 'current')) / subset(external, lab == 'current')
   )
 df
+```
+
+### Delta calcite vs deltapH
+
+[download](figs/calcvph.jpg)
+
+```{r calcvph, fig.height = 4, fig.width = 3.75}
+toplo <- envdatdelt %>% 
+  filter(var %in% c('pHdelt', 'Calcitedelt')) %>% 
+  filter(depth %in% 60) %>% 
+  filter(CTD %in% displo$CTD) %>%
+  dplyr::select(CTD, var, val) %>% 
+  spread(var, val) %>% 
+  left_join(shoreloc, by = 'CTD') 
+  
+ggplot(toplo, aes(x = pHdelt, y = Calcitedelt, colour = shoreloc)) +
+  geom_point(size = 2.5, alpha = 0.8) + 
+  xlab(expression(paste(Delta, 'pH'[60]))) +
+  ylab(expression(paste(Delta, 'Calcite'[60]))) +
+  pbase + 
+  theme(
+    legend.title = element_blank(), 
+    legend.position = 'top'
+  ) + 
+  scale_colour_manual(values = c('deepskyblue3', 'aquamarine3')) +
+  geom_smooth(method = 'lm', se = F, linetype = 'dashed', colour = 'black') +
+  geom_text_repel(aes(label = CTD), size = 3, show.legend = F)
+```
+
+```{r}
+summary(lm(Calcitedelt ~ pHdelt, toplo))
 ```
 
 ## Figure 2
